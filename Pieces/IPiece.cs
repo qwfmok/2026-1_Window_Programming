@@ -7,7 +7,7 @@ using CardChess.Models;
 
 namespace CardChess.Pieces
 {
-    internal interface IPieces
+    internal interface IPiece
     {
         Position CurrentPosition { get; set; }
         PlayerType Owner { get; }
