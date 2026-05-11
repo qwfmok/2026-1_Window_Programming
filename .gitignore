@@ -1,0 +1,24 @@
+## [ Visual Studio ]
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.doccache
+*.suo
+
+## [ Build Results ]
+*.exe
+*.dll
+*.pdb
+*.msi
+*.zip
+
+## [ Operating System ]
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## [ Temporary Files ]
+*.tmp
+*.log
