@@ -1,28 +1,27 @@
-﻿using CardChess.Models;
-using CardChess.Pieces.CardChess.Pieces;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CardChess.Models;
 
 namespace CardChess.Pieces
 {
     public class Pawn : IPiece
     {
-        // 1. 프로퍼티 구현
+        // 기물의 현재 위치, 소유자, 종류 정의
         public Position CurrentPosition { get; set; }
         public PlayerType Owner { get; private set; }
         public PieceType Type => PieceType.Pawn;
 
-        // 생성자: 생성 시 주인과 초기 위치를 정함
+        // 생성자: 초기 주인과 위치 설정
         public Pawn(PlayerType owner, Position position)
         {
             Owner = owner;
             CurrentPosition = position;
         }
 
-        // 2. 이동 로직: 오직 전진만 가능
+        // 이동 로직: 앞 칸이 비어있을 때만 1칸 전진 가능
         public List<Position> GetMovablePositions(GameState state)
         {
             List<Position> moves = new List<Position>();
@@ -40,7 +39,7 @@ namespace CardChess.Pieces
             return moves;
         }
 
-        // 3. 공격 로직: 대각선 방향에 적이 있을 때만 가능
+        // 공격 로직: 대각선 방향에 적 기물이 있을 때만 가능
         public List<Position> GetAttackablePositions(GameState state)
         {
             List<Position> attacks = new List<Position>();
@@ -55,7 +54,7 @@ namespace CardChess.Pieces
                 if (state.IsWithinBoard(diag))
                 {
                     var targetPiece = state.GetPieceAt(diag);
-                    // 대각선 위치에 기물이 존재하고, 그 기물이 내 기물이 아닐 때(적군)
+                    // 대각선 위치에 기물이 존재하고, 그 기물이 적군일 때만 추가
                     if (targetPiece != null && targetPiece.Owner != this.Owner)
                     {
                         attacks.Add(diag);
@@ -65,12 +64,13 @@ namespace CardChess.Pieces
             return attacks;
         }
 
-        // 4. 인터페이스에서 요구하는 확인 함수 (이미 구현된 리스트에 포함되는지 체크)
+        // 타겟 좌표가 이동 가능한 리스트에 있는지 확인
         public bool CanMove(Position target, GameState state)
         {
             return GetMovablePositions(state).Contains(target);
         }
 
+        // 타겟 좌표가 공격 가능한 리스트에 있는지 확인
         public bool CanAttack(Position target, GameState state)
         {
             return GetAttackablePositions(state).Contains(target);
