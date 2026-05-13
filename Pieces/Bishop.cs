@@ -10,66 +10,66 @@ namespace CardChess.Pieces
     public class Bishop : IPiece
     {
         // 비숍의 현재 위치, 소유자, 종류 정의
-        public Position CurrentPosition { get; set; }
-        public PlayerType Owner { get; set; }
-        public PieceType Type => PieceType.Bishop;
+        public position currentposition { get; set; }
+        public playertype owner { get; set; }
+        public piecetype type => piecetype.bishop;
 
         // 생성자: 소유자와 초기 위치 설정
-        public Bishop(PlayerType owner, Position currentPosition)
+        public bishop(playertype owner, position currentposition)
         {
-            Owner = owner;
-            CurrentPosition = currentPosition;
+            owner = owner;
+            currentposition = currentposition;
         }
 
         // 비숍의 이동 및 공격 로직은 동일 (대각선상에 적이 있으면 잡음)
-        public List<Position> GetMovablePositions(GameState state)
+        public list<position> getmovablepositions(gamestate state)
         {
-            return GetLongRangeMoves(state);
+            return getlongrangemoves(state);
         }
 
-        public List<Position> GetAttackablePositions(GameState state)
+        public list<position> getattackablepositions(gamestate state)
         {
-            return GetLongRangeMoves(state);
+            return getlongrangemoves(state);
         }
 
         // 대각선 4방향으로 장애물을 만날 때까지 탐색하는 로직
-        private List<Position> GetLongRangeMoves(GameState state)
+        private list<position> getlongrangemoves(gamestate state)
         {
-            List<Position> positions = new List<Position>();
+            list<position> positions = new list<position>();
 
             // 탐색할 대각선 4방향 정의
-            int[] dRow = { -1, -1, 1, 1 };
-            int[] dCol = { -1, 1, -1, 1 };
+            int[] drow = { -1, -1, 1, 1 };
+            int[] dcol = { -1, 1, -1, 1 };
 
             for (int i = 0; i < 4; i++)
             {
-                int nextRow = CurrentPosition.Row + dRow[i];
-                int nextCol = CurrentPosition.Col + dCol[i];
+                int nextrow = currentposition.row + drow[i];
+                int nextcol = currentposition.col + dcol[i];
 
                 // 보드 범위를 벗어나기 전까지 해당 방향으로 계속 전진
-                while (state.IsWithinBoard(new Position(nextRow, nextCol)))
+                while (state.iswithinboard(new position(nextrow, nextcol)))
                 {
-                    Position nextPos = new Position(nextRow, nextCol);
-                    IPiece target = state.GetPieceAt(nextPos);
+                    position nextpos = new position(nextrow, nextcol);
+                    ipiece target = state.getpieceat(nextpos);
 
                     if (target == null)
                     {
                         // 빈 칸이면 추가하고 계속 전진
-                        positions.Add(nextPos);
+                        positions.add(nextpos);
                     }
                     else
                     {
                         // 기물을 만났을 때: 적군이면 추가하고 중단, 아군이면 바로 중단
-                        if (target.Owner != this.Owner)
+                        if (target.owner != this.owner)
                         {
-                            positions.Add(nextPos);
+                            positions.add(nextpos);
                         }
                         break;
                     }
 
                     // 다음 칸으로 좌표 갱신
-                    nextRow += dRow[i];
-                    nextCol += dCol[i];
+                    nextrow += drow[i];
+                    nextcol += dcol[i];
                 }
             }
 
@@ -77,15 +77,15 @@ namespace CardChess.Pieces
         }
 
         // 타겟 좌표가 이동 가능한 리스트에 있는지 확인
-        public bool CanMove(Position target, GameState state)
+        public bool canmove(position target, gamestate state)
         {
-            return GetMovablePositions(state).Contains(target);
+            return getmovablepositions(state).contains(target);
         }
 
         // 타겟 좌표가 공격 가능한 리스트에 있는지 확인
-        public bool CanAttack(Position target, GameState state)
+        public bool canattack(position target, gamestate state)
         {
-            return GetAttackablePositions(state).Contains(target);
+            return getattackablepositions(state).contains(target);
         }
     }
 }
