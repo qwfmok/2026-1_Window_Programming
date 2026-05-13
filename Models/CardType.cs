@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace CardChess.Models
 {
-    internal class CardType
+    public enum CardType
     {
+        Evolution,
+        Skill,
+        Attack,
+        Defense
     }
 }

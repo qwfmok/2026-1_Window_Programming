@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace CardChess.Models
 {
-    internal class PlayerType
+    public enum PlayerType
     {
+        Player1,
+        Player2
     }
 }

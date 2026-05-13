@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace CardChess.Models
 {
-    internal class PieceType
+    public enum PieceType
     {
+        Pawn,
+        Rook,
+        Bishop,
+        Knight,
+        King
     }
 }
