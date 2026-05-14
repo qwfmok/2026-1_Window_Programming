@@ -27,7 +27,7 @@ namespace CardChess.Core
             Winner = null;
         }
 
-        public bool IsInsideBoard(Position position)
+        public bool IsWithinBoard(Position position)
         {
             return position.Row >= 0 && position.Row < 8
                 && position.Col >= 0 && position.Col < 8;
@@ -35,17 +35,15 @@ namespace CardChess.Core
 
         public IPiece GetPieceAt(Position position)
         {
-            if (!IsInsideBoard(position))
+            if (!IsWithinBoard(position)) // 여기 변경
                 return null;
-
             return Board[position.Row, position.Col];
         }
 
         public void SetPieceAt(Position position, IPiece piece)
         {
-            if (!IsInsideBoard(position))
+            if (!IsWithinBoard(position)) // 여기 변경
                 return;
-
             Board[position.Row, position.Col] = piece;
 
             if (piece != null)

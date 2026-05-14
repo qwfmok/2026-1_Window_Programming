@@ -14,7 +14,7 @@ namespace CardChess.Core
         UdpClient UDPline;
         private int Targetport;
         private string Hostport = "";
-        private bool IsConnected { get; private set; } = false;
+        public bool IsConnected { get; private set; } = false;
         public event Action<string> OnMessage;
         private void Send(string msg)
         {

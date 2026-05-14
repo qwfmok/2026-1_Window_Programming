@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CardChess.Models;
-
+using CardChess.Core;
 namespace CardChess.Pieces
 {
     public class King : IPiece

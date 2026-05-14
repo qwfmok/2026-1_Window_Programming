@@ -12,6 +12,7 @@ namespace CardChess.Models
         Rook,
         Bishop,
         Knight,
-        King
+        King,
+        Queen
     }
 }

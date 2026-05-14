@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CardChess.Models;
-
+using CardChess.Core;
 namespace CardChess.Pieces
 {
-    internal interface IPiece
+    public interface IPiece
     {
         Position CurrentPosition { get; set; }
         PlayerType Owner { get; }
