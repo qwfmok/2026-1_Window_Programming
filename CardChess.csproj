@@ -47,8 +47,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cards\EvolutionCard.cs" />
+    <Compile Include="Cards\FieldSkillCard.cs" />
     <Compile Include="Cards\ICard.cs" />
-    <Compile Include="Cards\SkillCard.cs" />
+    <Compile Include="Cards\ActiveSkillCard.cs" />
+    <Compile Include="Cards\TargetSkillCard.cs" />
+    <Compile Include="Cards\TrapCard.cs" />
     <Compile Include="Core\BattleManager.cs" />
     <Compile Include="Core\BoardManager.cs" />
     <Compile Include="Core\GameManager.cs" />
