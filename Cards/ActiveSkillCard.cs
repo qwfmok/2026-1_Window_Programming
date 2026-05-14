@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CardChess.Cards
 {
-    internal class SkillCard
+    internal class ActiveSkillCard
     {
     }
 }

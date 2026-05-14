@@ -4,13 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CardChess.Models
+namespace CardChess.Cards
 {
-    public enum CardType
+    internal class FieldSkillCard
     {
-        Evolution,
-        Skill,
-        Attack,
-        Defense
     }
 }
