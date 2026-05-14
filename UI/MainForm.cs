@@ -1,5 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CardChess.Models;
 using CardChess.Core;
@@ -9,7 +13,12 @@ namespace CardChess
 {
     public partial class MainForm : Form
     {
-        private GameState gameState; private Label lblTurn; private Panel pnlBoard; private Button btnRestart; private Button[,] boardButtons = new Button[8, 8];
+        // --- master 브랜치의 UI 변수들 ---
+        private GameState gameState; 
+        private Label lblTurn; 
+        private Panel pnlBoard; 
+        private Button btnRestart; 
+        private Button[,] boardButtons = new Button[8, 8];
 
         public MainForm()
         {
@@ -21,6 +30,14 @@ namespace CardChess
             RefreshBoard();
         }
 
+        // --- feat1 브랜치에서 추가된 그래픽 그리기 로직 (병합 완료) ---
+        private void Assets(object sender, PaintEventArgs e)
+        {
+            e.Graphics.DrawImage(chboard.Boardimage, chboard.X, chboard.Y, CardChess.Core.BoardManager.BOARD_WIDTH, CardChess.Core.BoardManager.BOARD_HEIGHT);
+            int cellSize = (int)(CardChess.Core.BoardManager.BOARD_WIDTH / CardChess.Core.BoardManager.MAX_COL);
+        }
+
+        // --- master 브랜치의 보드 생성 로직 ---
         private void CreateBoard()
         {
             int cellSize = 70;
@@ -74,7 +91,8 @@ namespace CardChess
                     }
                     else
                     {
-                        btn.Text = GetPieceText(piece);
+                        // GetPieceText는 아직 안 만들어졌으니 일단 임시로 "말"이라고 표시
+                        btn.Text = "말"; 
                     }
                 }
             }
@@ -145,4 +163,4 @@ namespace CardChess
 
         }
     }
-
+}
