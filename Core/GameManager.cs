@@ -19,16 +19,40 @@ namespace CardChess.Core
             InitializeBoard(); // 게임 시작 시 초기 세팅
         }
 
-        // ♟️ 임시로 폰 기물들을 배치하는 함수 (나중에 다른 기물들도 추가될 예정)
+        // ♟️ 킹과 퀸은 원래 위치에, 나머지 모든 기물은 폰으로 배치하는 특수 초기화 로직
         private void InitializeBoard()
         {
-            // Player1 폰 8개 배치 (1행)
+            // --- Player2 (위쪽 진영: Row 0, Row 1) --- 아래 방향(+1)으로 전진
+            // Row 0: 뒷줄 세팅 (Col 3: 퀸, Col 4: 킹, 나머지: 폰)
             for (int i = 0; i < 8; i++)
-                State.SetPieceAt(new Position(1, i), new Pawn(PlayerType.Player1, new Position(1, i)));
+            {
+                if (i == 3)
+                    State.SetPieceAt(new Position(0, i), new Queen(PlayerType.Player2, new Position(0, i)));
+                else if (i == 4)
+                    State.SetPieceAt(new Position(0, i), new King(PlayerType.Player2, new Position(0, i)));
+                else
+                    State.SetPieceAt(new Position(0, i), new Pawn(PlayerType.Player2, new Position(0, i)));
+            }
+            // Row 1: 앞줄 8칸은 전부 폰
+            for (int i = 0; i < 8; i++)
+                State.SetPieceAt(new Position(1, i), new Pawn(PlayerType.Player2, new Position(1, i)));
 
-            // Player2 폰 8개 배치 (6행)
+
+            // --- Player1 (아래쪽 진영: Row 6, Row 7) --- 위 방향(-1)으로 전진
+            // Row 6: 앞줄 8칸은 전부 폰
             for (int i = 0; i < 8; i++)
-                State.SetPieceAt(new Position(6, i), new Pawn(PlayerType.Player2, new Position(6, i)));
+                State.SetPieceAt(new Position(6, i), new Pawn(PlayerType.Player1, new Position(6, i)));
+
+            // Row 7: 뒷줄 세팅 (Col 3: 퀸, Col 4: 킹, 나머지: 폰)
+            for (int i = 0; i < 8; i++)
+            {
+                if (i == 3)
+                    State.SetPieceAt(new Position(7, i), new Queen(PlayerType.Player1, new Position(7, i)));
+                else if (i == 4)
+                    State.SetPieceAt(new Position(7, i), new King(PlayerType.Player1, new Position(7, i)));
+                else
+                    State.SetPieceAt(new Position(7, i), new Pawn(PlayerType.Player1, new Position(7, i)));
+            }
         }
 
         // 🛡️ 아군 기물인지 확인 (InputController에서 클릭 검증용으로 사용)
