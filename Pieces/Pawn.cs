@@ -31,9 +31,19 @@ namespace CardChess.Pieces
             Position forward = new Position(CurrentPosition.Row + direction, CurrentPosition.Col);
 
             // 보드 범위 안이고, 앞칸에 기물이 없어야 이동 가능
-            if (state.IsWithinBoard(forward) && state.GetPieceAt(forward) == null)
+            if (state.IsWithinBoard(forward))
             {
-                moves.Add(forward);
+                // 직진하려는 앞칸에 '애니비아 벽'이 깔려있다면?
+                string wallKey = $"{forward.Row},{forward.Col}";
+                if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
+                {
+                    // 벽이 있으면 앞칸이 null(빈칸)이더라도 이동할 수 없으므로 그냥 반환합니다.
+                    return moves;
+                }
+                if (state.GetPieceAt(forward) == null)
+                {
+                    moves.Add(forward);
+                }
             }
 
             return moves;
@@ -53,8 +63,15 @@ namespace CardChess.Pieces
 
                 if (state.IsWithinBoard(diag))
                 {
+                    // 공격하려는 대각선 칸에 '애니비아 벽'이 깔려있다면?
+                    string wallKey = $"{diag.Row},{diag.Col}";
+                    if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
+                    {
+                        continue; // 벽이 쳐진 대각선 칸은 공격 대상에서 제외하고 반대쪽 대각선 검사로 넘어감
+                    }
+
                     var targetPiece = state.GetPieceAt(diag);
-                    // 대각선 위치에 기물이 존재하고, 그 기물이 적군일 때만 추가
+                    // 대각선 위치에 기물이 존재하고, 그 기물이 적군일 때만 추가 (기존 로직)
                     if (targetPiece != null && targetPiece.Owner != this.Owner)
                     {
                         attacks.Add(diag);

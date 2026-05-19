@@ -1,5 +1,6 @@
 ﻿using CardChess.Core;
 using CardChess.Models;
+using CardChess.Pieces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,21 @@ namespace CardChess.Cards
     {
         public string Name { get; set; }
         public string Description { get; set; }
-        public int Cost { get; set; }
         public CardType Type => CardType.FieldSkill;
 
         // 필드물(벽 등)이 유지될 턴 수
         public int Duration { get; set; } = 2;
+        public FieldSkillCard(string name, string description)
+        {
+            Name = name;
+            Description = description;
+
+            // 카드별로 턴 제한이 다르면 여기서 세팅 가능
+            if (name == "애니비아 벽")
+            {
+                Duration = 2;
+            }  
+        }
 
         public bool CanUse(Position targetPos, GameState state)
         {
@@ -24,12 +35,26 @@ namespace CardChess.Cards
             return state.IsWithinBoard(targetPos) && state.GetPieceAt(targetPos) == null;
         }
 
-        public void Execute(Position targetPos, GameState state)
+        public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
-            // TODO: BoardManager나 GameState에 '장애물(Obstacle)' 설치 로직 호출
-            // 예: state.PlaceObstacle(targetPos, Duration);
-            // 기물이 아니기 때문에 IPiece와는 별개로 관리하거나, 
-            // 'Wall'이라는 특수 기물을 소환하는 방식으로 구현할 수 있습니다.
+            if (Name == "애니비아 벽")
+            {
+                string wallKey = $"{targetPos.Row},{targetPos.Col}";
+
+                if (!state.ActiveWalls.ContainsKey(wallKey))
+                {
+                    state.ActiveWalls.Add(wallKey, Duration);
+                    Console.WriteLine($"[지형 생성] {targetPos.Row},{targetPos.Col} 칸에 벽 상태가 부여되었습니다. ({Duration}턴 유지)");
+                }
+            }
+            else if (Name == "폰 소환")
+            {
+                PlayerType currentPlayer = state.CurrentTurn;
+                Pawn newPawn = new Pawn(currentPlayer, targetPos);
+                state.SetPieceAt(targetPos, newPawn);
+
+                Console.WriteLine($"[기물 소환] {targetPos.Row},{targetPos.Col} 칸에 {currentPlayer}의 폰이 소환되었습니다.");
+            }
         }
     }
 }

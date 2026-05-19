@@ -35,7 +35,12 @@ namespace CardChess.Pieces
                 int nextRow = CurrentPosition.Row + dRow[i];
                 int nextCol = CurrentPosition.Col + dCol[i];
                 Position nextPos = new Position(nextRow, nextCol);
-
+                string wallKey = $"{nextRow},{nextCol}";
+                if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
+                {
+                    // 이 칸에 벽이 있으면 '이 칸만' 스킵하고, 다음 방향(i+1)을 계속 검사합니다.
+                    continue;
+                }
                 // 보드 안에 있고, 아군 기물만 없다면 이동/공격 가능
                 if (state.IsWithinBoard(nextPos))
                 {

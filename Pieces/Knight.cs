@@ -35,10 +35,16 @@ namespace CardChess.Pieces
                 int nextRow = CurrentPosition.Row + dRow[i];
                 int nextCol = CurrentPosition.Col + dCol[i];
                 Position nextPos = new Position(nextRow, nextCol);
-
+                
                 // 보드 안에 있고, 해당 위치에 아군 기물만 없다면 점프 가능
                 if (state.IsWithinBoard(nextPos))
                 {
+                    // 착지하려는 칸에 벽이 있다면
+                    string wallKey = $"{nextRow},{nextCol}";
+                    if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
+                    {
+                        continue; // 이 좌표는 점프해서 내릴 수 없으므로 스킵
+                    }
                     IPiece target = state.GetPieceAt(nextPos);
 
                     // 빈 칸이거나 적군 기물이 있는 경우 리스트에 추가

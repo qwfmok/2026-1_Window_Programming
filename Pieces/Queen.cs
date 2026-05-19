@@ -50,6 +50,12 @@ namespace CardChess.Pieces
                 while (state.IsWithinBoard(new Position(nextRow, nextCol)))
                 {
                     Position nextPos = new Position(nextRow, nextCol);
+                    string wallKey = $"{nextRow},{nextCol}";
+                    if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
+                    {
+                        // 벽 뒤쪽으로는 아예 갈 수 없으므로, 해당 방향 탐색을 즉시 중단(break)합니다.
+                        break;
+                    }
                     IPiece target = state.GetPieceAt(nextPos);
 
                     if (target == null)

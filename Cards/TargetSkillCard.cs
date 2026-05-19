@@ -12,7 +12,6 @@ namespace CardChess.Cards
     {
         public string Name { get; set; }
         public string Description { get; set; }
-        public int Cost { get; set; }
         public CardType Type => CardType.TargetSkill;
 
         public bool CanUse(Position targetPos, GameState state)
@@ -21,7 +20,7 @@ namespace CardChess.Cards
             return true;
         }
 
-        public void Execute(Position targetPos, GameState state)
+        public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
             // 요네 E, 복제, 마인드 컨트롤 등 대상 중심 로직 구현
         }
