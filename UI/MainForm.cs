@@ -16,6 +16,7 @@ namespace CardChess
     {
         // --- master 브랜치의 UI 변수들 ---
         // --- GameState 대신 GameManager와 InputController로 교체 했습니다. (현빈)---
+
         private GameManager gameManager;
         private InputController inputController;
         private Label lblTurn;
@@ -28,6 +29,9 @@ namespace CardChess
         {
             InitializeComponent();
 
+            this.Width = 1600;
+            this.Height = 900;
+
             gameManager = new GameManager(); //따라서 여기도
             inputController = new InputController(gameManager, PlayerType.Player1);
             inputController.OnLogMessage += (sender, msg) => { logbox.Items.Add(msg); };
@@ -36,7 +40,7 @@ namespace CardChess
             RefreshBoard();
         }
 
-        // --- feat1 브랜치에서 추가된 그래픽 그리기 로직 (병합 완료) 오류투성이라 일단 잠시 주석처리함---
+        // --- feat1 브랜치에서 추가된 그래픽 그리기 로직(병합 완료) 오류투성이라 일단 잠시 주석처리함---
         //private void Assets(object sender, PaintEventArgs e)
         //{
         //    e.Graphics.DrawImage(chboard.Boardimage, chboard.X, chboard.Y, CardChess.Core.BoardManager.BOARD_WIDTH, CardChess.Core.BoardManager.BOARD_HEIGHT);
@@ -44,6 +48,7 @@ namespace CardChess
         //}
 
         // --- master 브랜치의 보드 생성 로직 ---
+
         private void CreateBoard()
         {
             int cellSize = 70;
