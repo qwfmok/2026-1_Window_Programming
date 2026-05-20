@@ -18,10 +18,12 @@ namespace CardChess
         // --- GameState 대신 GameManager와 InputController로 교체 했습니다. (현빈)---
         private GameManager gameManager;
         private InputController inputController;
-        private Label lblTurn;
         private Panel pnlBoard;
-        private Button btnRestart;
         private ListBox logbox;
+        private Panel pnlOpponentHand;
+        private Panel pnlPlayerHand;
+        private Panel pnlOpponentDeck;
+        private Panel pnlPlayerDeck;
         private Button[,] boardButtons = new Button[8, 8];
 
         public MainForm()
@@ -46,7 +48,7 @@ namespace CardChess
         // --- master 브랜치의 보드 생성 로직 ---
         private void CreateBoard()
         {
-            int cellSize = 70;
+            int cellSize = 90;
 
             pnlBoard.Controls.Clear();
 
@@ -103,7 +105,7 @@ namespace CardChess
                 }
             }
 
-            lblTurn.Text = $"현재 턴: {gameManager.CurrentTurn}";
+            //lblTurn.Text = $"현재 턴: {gameManager.CurrentTurn}";
         }
 
         private void BoardButton_Click(object sender, EventArgs e)
@@ -124,63 +126,73 @@ namespace CardChess
 
         private void InitializeComponent()
         {
-            this.lblTurn = new System.Windows.Forms.Label();
             this.pnlBoard = new System.Windows.Forms.Panel();
-            this.btnRestart = new System.Windows.Forms.Button();
             this.logbox = new System.Windows.Forms.ListBox();
+            this.pnlOpponentHand = new System.Windows.Forms.Panel();
+            this.pnlPlayerHand = new System.Windows.Forms.Panel();
+            this.pnlOpponentDeck = new System.Windows.Forms.Panel();
+            this.pnlPlayerDeck = new System.Windows.Forms.Panel();
             this.SuspendLayout();
-            // 
-            // lblTurn
-            // 
-            this.lblTurn.AutoSize = true;
-            this.lblTurn.Font = new System.Drawing.Font("굴림", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.lblTurn.Location = new System.Drawing.Point(20, 20);
-            this.lblTurn.Name = "lblTurn";
-            this.lblTurn.Size = new System.Drawing.Size(175, 22);
-            this.lblTurn.TabIndex = 0;
-            this.lblTurn.Text = "현재 턴: Player1";
             // 
             // pnlBoard
             // 
-            this.pnlBoard.Location = new System.Drawing.Point(20, 60);
+            this.pnlBoard.Location = new System.Drawing.Point(30, 30);
             this.pnlBoard.Name = "pnlBoard";
-            this.pnlBoard.Size = new System.Drawing.Size(560, 560);
+            this.pnlBoard.Size = new System.Drawing.Size(720, 720);
             this.pnlBoard.TabIndex = 1;
-            // 
-            // btnRestart
-            // 
-            this.btnRestart.Location = new System.Drawing.Point(610, 580);
-            this.btnRestart.Name = "btnRestart";
-            this.btnRestart.Size = new System.Drawing.Size(120, 40);
-            this.btnRestart.TabIndex = 2;
-            this.btnRestart.Text = "button1";
-            this.btnRestart.UseVisualStyleBackColor = true;
-            this.btnRestart.Click += new System.EventHandler(this.btnRestart_Click);
             // 
             // logbox
             // 
             this.logbox.FormattingEnabled = true;
-            this.logbox.ItemHeight = 12;
-            this.logbox.Location = new System.Drawing.Point(598, 60);
+            this.logbox.ItemHeight = 15;
+            this.logbox.Location = new System.Drawing.Point(780, 240);
             this.logbox.Name = "logbox";
-            this.logbox.Size = new System.Drawing.Size(251, 160);
+            this.logbox.Size = new System.Drawing.Size(224, 169);
             this.logbox.TabIndex = 3;
+            // 
+            // pnlOpponentHand
+            // 
+            this.pnlOpponentHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlOpponentHand.Location = new System.Drawing.Point(780, 30);
+            this.pnlOpponentHand.Name = "pnlOpponentHand";
+            this.pnlOpponentHand.Size = new System.Drawing.Size(540, 190);
+            this.pnlOpponentHand.TabIndex = 4;
+            // 
+            // pnlPlayerHand
+            // 
+            this.pnlPlayerHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPlayerHand.Location = new System.Drawing.Point(780, 440);
+            this.pnlPlayerHand.Name = "pnlPlayerHand";
+            this.pnlPlayerHand.Size = new System.Drawing.Size(540, 280);
+            this.pnlPlayerHand.TabIndex = 5;
+            // 
+            // pnlOpponentDeck
+            // 
+            this.pnlOpponentDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlOpponentDeck.Location = new System.Drawing.Point(1230, 60);
+            this.pnlOpponentDeck.Name = "pnlOpponentDeck";
+            this.pnlOpponentDeck.Size = new System.Drawing.Size(80, 120);
+            this.pnlOpponentDeck.TabIndex = 6;
+            // 
+            // pnlPlayerDeck
+            // 
+            this.pnlPlayerDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPlayerDeck.Location = new System.Drawing.Point(1230, 570);
+            this.pnlPlayerDeck.Name = "pnlPlayerDeck";
+            this.pnlPlayerDeck.Size = new System.Drawing.Size(80, 120);
+            this.pnlPlayerDeck.TabIndex = 7;
             // 
             // MainForm
             // 
-            this.ClientSize = new System.Drawing.Size(882, 653);
+            this.ClientSize = new System.Drawing.Size(1382, 753);
+            this.Controls.Add(this.pnlPlayerDeck);
+            this.Controls.Add(this.pnlOpponentDeck);
+            this.Controls.Add(this.pnlPlayerHand);
+            this.Controls.Add(this.pnlOpponentHand);
             this.Controls.Add(this.logbox);
-            this.Controls.Add(this.btnRestart);
             this.Controls.Add(this.pnlBoard);
-            this.Controls.Add(this.lblTurn);
             this.Name = "MainForm";
             this.ResumeLayout(false);
-            this.PerformLayout();
-
-        }
-
-        private void btnRestart_Click(object sender, EventArgs e)
-        {
 
         }
     }
