@@ -24,6 +24,8 @@ namespace CardChess
         private Panel pnlPlayerHand;
         private Panel pnlOpponentDeck;
         private Panel pnlPlayerDeck;
+        private Panel pnlDrawArea;
+        private Panel pnlPlayArea;
         private Button[,] boardButtons = new Button[8, 8];
 
         public MainForm()
@@ -132,6 +134,10 @@ namespace CardChess
             this.pnlPlayerHand = new System.Windows.Forms.Panel();
             this.pnlOpponentDeck = new System.Windows.Forms.Panel();
             this.pnlPlayerDeck = new System.Windows.Forms.Panel();
+            this.pnlDrawArea = new System.Windows.Forms.Panel();
+            this.pnlPlayArea = new System.Windows.Forms.Panel();
+            this.pnlOpponentHand.SuspendLayout();
+            this.pnlPlayerHand.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlBoard
@@ -147,51 +153,71 @@ namespace CardChess
             this.logbox.ItemHeight = 15;
             this.logbox.Location = new System.Drawing.Point(780, 240);
             this.logbox.Name = "logbox";
-            this.logbox.Size = new System.Drawing.Size(224, 169);
+            this.logbox.Size = new System.Drawing.Size(334, 184);
             this.logbox.TabIndex = 3;
             // 
             // pnlOpponentHand
             // 
             this.pnlOpponentHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlOpponentHand.Controls.Add(this.pnlOpponentDeck);
             this.pnlOpponentHand.Location = new System.Drawing.Point(780, 30);
             this.pnlOpponentHand.Name = "pnlOpponentHand";
-            this.pnlOpponentHand.Size = new System.Drawing.Size(540, 190);
+            this.pnlOpponentHand.Size = new System.Drawing.Size(590, 190);
             this.pnlOpponentHand.TabIndex = 4;
             // 
             // pnlPlayerHand
             // 
             this.pnlPlayerHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPlayerHand.Controls.Add(this.pnlPlayerDeck);
             this.pnlPlayerHand.Location = new System.Drawing.Point(780, 440);
             this.pnlPlayerHand.Name = "pnlPlayerHand";
-            this.pnlPlayerHand.Size = new System.Drawing.Size(540, 280);
+            this.pnlPlayerHand.Size = new System.Drawing.Size(590, 280);
             this.pnlPlayerHand.TabIndex = 5;
             // 
             // pnlOpponentDeck
             // 
             this.pnlOpponentDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlOpponentDeck.Location = new System.Drawing.Point(1230, 60);
+            this.pnlOpponentDeck.Location = new System.Drawing.Point(465, 3);
             this.pnlOpponentDeck.Name = "pnlOpponentDeck";
-            this.pnlOpponentDeck.Size = new System.Drawing.Size(80, 120);
+            this.pnlOpponentDeck.Size = new System.Drawing.Size(120, 180);
             this.pnlOpponentDeck.TabIndex = 6;
             // 
             // pnlPlayerDeck
             // 
             this.pnlPlayerDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlPlayerDeck.Location = new System.Drawing.Point(1230, 570);
+            this.pnlPlayerDeck.Location = new System.Drawing.Point(465, 95);
             this.pnlPlayerDeck.Name = "pnlPlayerDeck";
-            this.pnlPlayerDeck.Size = new System.Drawing.Size(80, 120);
+            this.pnlPlayerDeck.Size = new System.Drawing.Size(120, 180);
             this.pnlPlayerDeck.TabIndex = 7;
+            // 
+            // pnlDrawArea
+            // 
+            this.pnlDrawArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlDrawArea.Location = new System.Drawing.Point(1120, 240);
+            this.pnlDrawArea.Name = "pnlDrawArea";
+            this.pnlDrawArea.Size = new System.Drawing.Size(120, 180);
+            this.pnlDrawArea.TabIndex = 8;
+            // 
+            // pnlPlayArea
+            // 
+            this.pnlPlayArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPlayArea.Location = new System.Drawing.Point(1246, 240);
+            this.pnlPlayArea.Name = "pnlPlayArea";
+            this.pnlPlayArea.Size = new System.Drawing.Size(120, 180);
+            this.pnlPlayArea.TabIndex = 9;
             // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(1382, 753);
-            this.Controls.Add(this.pnlPlayerDeck);
-            this.Controls.Add(this.pnlOpponentDeck);
+            this.Controls.Add(this.pnlDrawArea);
+            this.Controls.Add(this.pnlPlayArea);
             this.Controls.Add(this.pnlPlayerHand);
             this.Controls.Add(this.pnlOpponentHand);
             this.Controls.Add(this.logbox);
             this.Controls.Add(this.pnlBoard);
             this.Name = "MainForm";
+            this.pnlOpponentHand.ResumeLayout(false);
+            this.pnlPlayerHand.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
