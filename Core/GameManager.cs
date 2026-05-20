@@ -9,14 +9,16 @@ namespace CardChess.Core
     {
         // 게임의 모든 상태(보드판, 손패, 턴 등)를 들고 있는 객체
         public GameState State { get; private set; }
-
+        public CardManager CardMgr { get; private set; } // 카드 매니저 추가
         // InputController에서 편하게 턴을 확인할 수 있도록 프로퍼티 제공
         public PlayerType CurrentTurn => State.CurrentTurn;
 
         public GameManager()
         {
             State = new GameState();
+            CardMgr = new CardManager(State); // 카드 매니저 생성
             InitializeBoard(); // 게임 시작 시 초기 세팅
+            CardMgr.InitializeDecks(); // 덱 초기화 호출
         }
 
         // ♟️ 킹과 퀸은 원래 위치에, 나머지 모든 기물은 폰으로 배치하는 특수 초기화 로직
@@ -90,10 +92,11 @@ namespace CardChess.Core
         {
             // TODO: 나중에 정우 님이 ICard 인터페이스에 Use() 함수를 만들면 여기서 실행
             // 예: card.Use(State, targetPos);
-
+            CardMgr.UseCard(card, targetPos, State.CurrentTurn);
             // 카드 사용 후 턴 종료
             EndTurn();
         }
+
 
         // 🔄 턴 넘기기
         private void EndTurn()
@@ -101,6 +104,7 @@ namespace CardChess.Core
             State.CurrentTurn = (State.CurrentTurn == PlayerType.Player1)
                                 ? PlayerType.Player2
                                 : PlayerType.Player1;
+            CardMgr.DrawCard(State.CurrentTurn);
         }
     }
 }
