@@ -9,6 +9,7 @@ using CardChess.Models;
 using CardChess.Core;
 using CardChess.Pieces;
 using CardChess.Input;
+using System.IO;
 using CardChess.Cards; // 카드를 인식하기 위해 추가!
 
 namespace CardChess
@@ -40,7 +41,7 @@ namespace CardChess
 
             CreateBoard();
             RefreshBoard();
-            CreatePlayerHand(); 
+            RefreshHand();
         }
 
         // --- master 브랜치의 보드 생성 로직 ---
@@ -118,20 +119,36 @@ namespace CardChess
                 {
                     Position position = new Position(row, col);
                     IPiece piece = gameManager.State.GetPieceAt(position);
-
                     Button btn = boardButtons[row, col];
 
                     if (piece == null)
                     {
                         btn.Text = "";
+                        btn.BackgroundImage = null; // 빈칸은 이미지 지우기
                     }
                     else
                     {
-                        // 임시 글자 "말" 대신 실제 주인과 기물 종류 표시 (예: Player1 Pawn)
-                        btn.Text = $"{piece.Owner}\n{piece.Type}";
+                        btn.Text = ""; // 이미지를 넣을 거니까 텍스트는 싹 지워줌!
+
+                        // 🌟 이미지 파일 이름 조합 (예: "Player1_Pawn.png")
+                        string fileName = $"{piece.Owner}_{piece.Type}.png";
+                        string imgPath = Path.Combine(Application.StartupPath, "Assets", fileName);
+
+                        if (File.Exists(imgPath))
+                        {
+                            btn.BackgroundImage = Image.FromFile(imgPath);
+                            btn.BackgroundImageLayout = ImageLayout.Zoom; // 버튼 크기에 꽉 차게 비율 조정
+                        }
+                        else
+                        {
+                            // 만약 해당 이름의 이미지가 폴더에 없다면 임시로 글자라도 띄워줌
+                            btn.Text = $"{piece.Owner}\n{piece.Type}";
+                        }
                     }
                 }
             }
+            // 보드를 새로고침 할 때, 손패(Hand)도 같이 새로고침!
+            RefreshHand();
         }
 
         private void BoardButton_Click(object sender, EventArgs e)
@@ -153,18 +170,21 @@ namespace CardChess
         // ==========================================================
         //  내 손패(Hand) UI 띄우기 및 연결 이거 쮸댄 하기 시러
         // ==========================================================
-        private void CreatePlayerHand()
+
+        private void RefreshHand()
         {
+            pnlPlayerHand.Controls.Clear(); // 👈 카드를 새로 그리기 전에 기존 카드 싹 지우기!
+
             int cardWidth = 80;
             int cardHeight = 120;
             int spacing = 10;
             int startX = 10;
             int startY = 10;
 
-            // 게임매니저에서 내 손패 리스트를 가져와서 개수만큼 버튼 생성
-            for (int i = 0; i < gameManager.State.Player1Hand.Count; i++)
+            for (int i = 0; i < gameManager.State.Hands[PlayerType.Player1].Count; i++)
             {
-                ICard card = gameManager.State.Player1Hand[i];
+                // 👇 여기도 수정!
+                ICard card = gameManager.State.Hands[PlayerType.Player1][i];
                 Button btnCard = new Button();
 
                 btnCard.Width = cardWidth;
@@ -173,15 +193,14 @@ namespace CardChess
                 btnCard.Top = startY;
 
                 btnCard.FlatStyle = FlatStyle.Flat;
-                btnCard.BackColor = Color.LightGoldenrodYellow; // 카드 색상
+                btnCard.BackColor = Color.LightGoldenrodYellow;
                 btnCard.Font = new Font("맑은 고딕", 10, FontStyle.Bold);
-                btnCard.Text = card.Name; // 카드 이름 표시
-                btnCard.Tag = card;       // 버튼에 실제 카드 객체를 숨겨둠
+                btnCard.Text = card.Name;
+                btnCard.Tag = card;
 
-                // 컨트롤러 연결 부분!
+                // 마우스 드래그 이벤트 연결
                 btnCard.MouseDown += CardButton_MouseDown;
 
-                // 패널에 카드 추가 (덱과 안 겹치게 추가됨)
                 pnlPlayerHand.Controls.Add(btnCard);
             }
         }
