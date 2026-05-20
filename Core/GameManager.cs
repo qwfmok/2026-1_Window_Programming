@@ -53,6 +53,9 @@ namespace CardChess.Core
                 else
                     State.SetPieceAt(new Position(7, i), new Pawn(PlayerType.Player1, new Position(7, i)));
             }
+            State.Player1Hand.Add(new ActiveSkillCard("파이어볼"));
+            State.Player1Hand.Add(new ActiveSkillCard("힐링"));
+            State.Player1Hand.Add(new ActiveSkillCard("순간이동"));
         }
 
         // 🛡️ 아군 기물인지 확인 (InputController에서 클릭 검증용으로 사용)

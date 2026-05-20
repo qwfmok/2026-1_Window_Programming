@@ -9,13 +9,13 @@ using CardChess.Models;
 using CardChess.Core;
 using CardChess.Pieces;
 using CardChess.Input;
+using CardChess.Cards; // 카드를 인식하기 위해 추가!
 
 namespace CardChess
 {
     public partial class MainForm : Form
     {
         // --- master 브랜치의 UI 변수들 ---
-        // --- GameState 대신 GameManager와 InputController로 교체 했습니다. (현빈)---
         private GameManager gameManager;
         private InputController inputController;
         private Panel pnlBoard;
@@ -27,25 +27,21 @@ namespace CardChess
         private Panel pnlDrawArea;
         private Panel pnlPlayArea;
         private Button[,] boardButtons = new Button[8, 8];
+        private Button ghostCard = null;
+        private Button originalCardButton = null;
 
         public MainForm()
         {
             InitializeComponent();
 
-            gameManager = new GameManager(); //따라서 여기도
+            gameManager = new GameManager();
             inputController = new InputController(gameManager, PlayerType.Player1);
             inputController.OnLogMessage += (sender, msg) => { logbox.Items.Add(msg); };
 
             CreateBoard();
             RefreshBoard();
+            CreatePlayerHand(); 
         }
-
-        // --- feat1 브랜치에서 추가된 그래픽 그리기 로직 (병합 완료) 오류투성이라 일단 잠시 주석처리함---
-        //private void Assets(object sender, PaintEventArgs e)
-        //{
-        //    e.Graphics.DrawImage(chboard.Boardimage, chboard.X, chboard.Y, CardChess.Core.BoardManager.BOARD_WIDTH, CardChess.Core.BoardManager.BOARD_HEIGHT);
-        //    int cellSize = (int)(CardChess.Core.BoardManager.BOARD_WIDTH / CardChess.Core.BoardManager.MAX_COL);
-        //}
 
         // --- master 브랜치의 보드 생성 로직 ---
         private void CreateBoard()
@@ -78,12 +74,42 @@ namespace CardChess
 
                     btn.Click += BoardButton_Click;
 
+                    btn.AllowDrop = true;
+                    btn.DragEnter += BoardButton_DragEnter;
+                    btn.DragDrop += BoardButton_DragDrop;
+
                     pnlBoard.Controls.Add(btn);
                     boardButtons[row, col] = btn;
                 }
             }
         }
 
+        // 마우스가 카드를 끌고 보드판 위에 올라왔을 때 (허락해주는 역할)
+        private void BoardButton_DragEnter(object sender, DragEventArgs e)
+        {
+            // 끌고 온 데이터가 ActiveSkillCard가 맞으면 마우스 커서를 '이동' 모양으로 바꿔줌
+            if (e.Data.GetDataPresent(typeof(ActiveSkillCard)))
+            {
+                e.Effect = DragDropEffects.Move;
+            }
+        }
+
+        // 보드판 위에서 마우스 클릭을 탁! 놨을 때 (스킬 발동 역할)
+        private void BoardButton_DragDrop(object sender, DragEventArgs e)
+        {
+            Button btn = sender as Button;
+            if (btn == null) return;
+
+            // 드롭된 위치 좌표 확인
+            Position position = (Position)btn.Tag;
+
+            // 이미 마우스를 누를 때 inputController.OnCardClicked()가 실행된 상태니까,
+            // 여기서는 깔끔하게 그 위치에 클릭했다는 신호만 넘겨주면 스킬 발동 끝!
+            inputController.OnBoardClicked(position);
+
+            // 화면 갱신
+            RefreshBoard();
+        }
         private void RefreshBoard()
         {
             for (int row = 0; row < 8; row++)
@@ -106,8 +132,6 @@ namespace CardChess
                     }
                 }
             }
-
-            //lblTurn.Text = $"현재 턴: {gameManager.CurrentTurn}";
         }
 
         private void BoardButton_Click(object sender, EventArgs e)
@@ -124,6 +148,77 @@ namespace CardChess
 
             // 컨트롤러가 이동 로직을 끝냈으니 화면을 다시 그려줌
             RefreshBoard();
+        }
+
+        // ==========================================================
+        //  내 손패(Hand) UI 띄우기 및 연결 이거 쮸댄 하기 시러
+        // ==========================================================
+        private void CreatePlayerHand()
+        {
+            int cardWidth = 80;
+            int cardHeight = 120;
+            int spacing = 10;
+            int startX = 10;
+            int startY = 10;
+
+            // 게임매니저에서 내 손패 리스트를 가져와서 개수만큼 버튼 생성
+            for (int i = 0; i < gameManager.State.Player1Hand.Count; i++)
+            {
+                ICard card = gameManager.State.Player1Hand[i];
+                Button btnCard = new Button();
+
+                btnCard.Width = cardWidth;
+                btnCard.Height = cardHeight;
+                btnCard.Left = startX + (cardWidth + spacing) * i;
+                btnCard.Top = startY;
+
+                btnCard.FlatStyle = FlatStyle.Flat;
+                btnCard.BackColor = Color.LightGoldenrodYellow; // 카드 색상
+                btnCard.Font = new Font("맑은 고딕", 10, FontStyle.Bold);
+                btnCard.Text = card.Name; // 카드 이름 표시
+                btnCard.Tag = card;       // 버튼에 실제 카드 객체를 숨겨둠
+
+                // 컨트롤러 연결 부분!
+                btnCard.MouseDown += CardButton_MouseDown;
+
+                // 패널에 카드 추가 (덱과 안 겹치게 추가됨)
+                pnlPlayerHand.Controls.Add(btnCard);
+            }
+        }
+
+        private void CardButton_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                originalCardButton = sender as Button;
+                ICard clickedCard = (ICard)originalCardButton.Tag;
+
+                // 1. 컨트롤러에 카드 선택 알림
+                inputController.OnCardClicked(clickedCard);
+
+                // 2. 마우스를 따라다닐 '가짜 카드(분신)' 생성
+                ghostCard = new Button();
+                ghostCard.Width = originalCardButton.Width;
+                ghostCard.Height = originalCardButton.Height;
+                ghostCard.Text = originalCardButton.Text;
+                ghostCard.Font = originalCardButton.Font;
+                ghostCard.BackColor = originalCardButton.BackColor;
+                ghostCard.FlatStyle = FlatStyle.Flat;
+
+                // 3. 분신을 메인 폼에 추가하고 맨 앞으로 가져오기
+                this.Controls.Add(ghostCard);
+                ghostCard.BringToFront();
+
+                // 4. 원래 카드는 드래그하는 동안 안 보이게 숨김
+                originalCardButton.Visible = false;
+
+                // 5. 마우스 움직임과 놓음 이벤트를 분신 카드에 연결!
+                ghostCard.MouseMove += GhostCard_MouseMove;
+                ghostCard.MouseUp += GhostCard_MouseUp;
+
+                // 6. 마우스가 폼 밖으로 나가도 이 카드가 마우스를 꽉 쥐고 있게 설정
+                ghostCard.Capture = true;
+            }
         }
 
         private void InitializeComponent()
@@ -220,6 +315,66 @@ namespace CardChess
             this.pnlPlayerHand.ResumeLayout(false);
             this.ResumeLayout(false);
 
+        }
+        // 마우스를 드래그할 때 카드가 통째로 따라다니는 로직
+        private void GhostCard_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (ghostCard != null && e.Button == MouseButtons.Left)
+            {
+                // 마우스 커서의 현재 위치를 가져와서 카드의 정중앙이 마우스에 오도록 설정
+                Point mousePos = this.PointToClient(Cursor.Position);
+                ghostCard.Location = new Point(mousePos.X - (ghostCard.Width / 2), mousePos.Y - (ghostCard.Height / 2));
+            }
+        }
+
+        // 드래그를 끝내고 마우스 왼쪽 버튼을 놨을 때 (스킬 발동!)
+        private void GhostCard_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (ghostCard != null)
+            {
+                ghostCard.Capture = false;
+
+                // 1. 어떤 보드판 버튼 위에서 마우스를 놨는지 추적
+                Button droppedBoardBtn = null;
+                for (int row = 0; row < 8; row++)
+                {
+                    for (int col = 0; col < 8; col++)
+                    {
+                        Button b = boardButtons[row, col];
+                        // 보드 버튼의 모니터 화면상 좌표를 계산
+                        Rectangle screenBounds = b.RectangleToScreen(b.ClientRectangle);
+
+                        // 마우스를 놓은 위치가 해당 보드 버튼 영역 안이라면?
+                        if (screenBounds.Contains(Cursor.Position))
+                        {
+                            droppedBoardBtn = b;
+                            break;
+                        }
+                    }
+                    if (droppedBoardBtn != null) break;
+                }
+
+                // 2. 보드판 위에 제대로 놨다면 스킬 발동!
+                if (droppedBoardBtn != null)
+                {
+                    Position targetPos = (Position)droppedBoardBtn.Tag;
+                    inputController.OnBoardClicked(targetPos);
+                    RefreshBoard();
+                }
+                else
+                {
+                    // 보드판 밖(허공)에 버렸다면 선택 취소
+                    inputController.CancelSelection();
+                }
+
+                // 3. 작업이 끝났으니 분신 카드는 삭제하고 원래 카드를 다시 보여줌
+                this.Controls.Remove(ghostCard);
+                ghostCard.Dispose();
+                ghostCard = null;
+
+                originalCardButton.Visible = true;
+                originalCardButton = null;
+            }
         }
     }
 }
