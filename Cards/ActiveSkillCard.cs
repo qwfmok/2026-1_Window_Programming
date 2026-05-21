@@ -39,7 +39,7 @@ namespace CardChess.Cards
                     if (state.Hands.ContainsKey(player))
                     {
                         // 버리기 전, 현재 손패가 몇 장인지 기억해둔다.
-                        int discardedCount = state.Hands[player].Count;
+                        int discardedCount = state.Hands[player].Count - 1;
 
                         if (discardedCount > 0)
                         {

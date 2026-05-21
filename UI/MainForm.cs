@@ -28,8 +28,10 @@ namespace CardChess
         private Panel pnlDrawArea;
         private Panel pnlPlayArea;
         private Button[,] boardButtons = new Button[8, 8];
+        private Button btnPassTurn;
         private Button ghostCard = null;
         private Button originalCardButton = null;
+        private bool gameEndMessageShown = false;
 
         public MainForm()
         {
@@ -40,7 +42,10 @@ namespace CardChess
 
             gameManager = new GameManager(); 
             inputController = new InputController(gameManager, PlayerType.Player1);
-            inputController.OnLogMessage += (sender, msg) => { logbox.Items.Add(msg); };
+            inputController.OnLogMessage += (sender, msg) =>
+            {
+                AddLog(msg);
+            };
 
             CreateBoard();
             RefreshBoard();
@@ -164,6 +169,12 @@ namespace CardChess
 
         private void BoardButton_Click(object sender, EventArgs e)
         {
+            if (gameManager.State.IsGameOver)
+            {
+                ShowGameEndMessageIfNeeded();
+                return;
+            }
+
             Button clickedButton = sender as Button;
 
             if (clickedButton == null)
@@ -171,11 +182,11 @@ namespace CardChess
 
             Position position = (Position)clickedButton.Tag;
 
-            // --- 알림창을 지우고 컨트롤러에 좌표 전달 ---
             inputController.OnBoardClicked(position);
 
-            // 컨트롤러가 이동 로직을 끝냈으니 화면을 다시 그려줌
             RefreshBoard();
+
+            ShowGameEndMessageIfNeeded();
         }
 
         // ==========================================================
@@ -261,6 +272,7 @@ namespace CardChess
             this.pnlPlayerDeck = new System.Windows.Forms.Panel();
             this.pnlDrawArea = new System.Windows.Forms.Panel();
             this.pnlPlayArea = new System.Windows.Forms.Panel();
+            this.btnPassTurn = new System.Windows.Forms.Button();
             this.pnlOpponentHand.SuspendLayout();
             this.pnlPlayerHand.SuspendLayout();
             this.SuspendLayout();
@@ -331,9 +343,20 @@ namespace CardChess
             this.pnlPlayArea.Size = new System.Drawing.Size(120, 180);
             this.pnlPlayArea.TabIndex = 9;
             // 
+            // btnPassTurn
+            // 
+            this.btnPassTurn.Location = new System.Drawing.Point(1120, 430);
+            this.btnPassTurn.Name = "btnPassTurn";
+            this.btnPassTurn.Size = new System.Drawing.Size(246, 40);
+            this.btnPassTurn.TabIndex = 10;
+            this.btnPassTurn.Text = "턴 넘기기";
+            this.btnPassTurn.UseVisualStyleBackColor = true;
+            this.btnPassTurn.Click += new System.EventHandler(this.BtnPassTurn_Click);
+            // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(1382, 753);
+            this.Controls.Add(this.btnPassTurn);
             this.Controls.Add(this.pnlDrawArea);
             this.Controls.Add(this.pnlPlayArea);
             this.Controls.Add(this.pnlPlayerHand);
@@ -356,6 +379,8 @@ namespace CardChess
                 ghostCard.Location = new Point(mousePos.X - (ghostCard.Width / 2), mousePos.Y - (ghostCard.Height / 2));
             }
         }
+        
+
 
         // 드래그를 끝내고 마우스 왼쪽 버튼을 놨을 때 (스킬 발동!)
         private void GhostCard_MouseUp(object sender, MouseEventArgs e)
@@ -390,6 +415,7 @@ namespace CardChess
                     Position targetPos = (Position)droppedBoardBtn.Tag;
                     inputController.OnBoardClicked(targetPos);
                     RefreshBoard();
+                    ShowGameEndMessageIfNeeded();
                 }
                 else
                 {
@@ -404,6 +430,47 @@ namespace CardChess
 
                 originalCardButton.Visible = true;
                 originalCardButton = null;
+            }
+        }
+
+        private void BtnPassTurn_Click(object sender, EventArgs e)
+        {
+            gameManager.PassTurn();
+
+            AddLog($"턴을 넘겼습니다. 현재 턴: {gameManager.CurrentTurn}");
+
+            RefreshBoard();
+            RefreshHand();
+        }
+
+        private void ShowGameEndMessageIfNeeded()
+        {
+            if (gameEndMessageShown)
+                return;
+
+            if (!gameManager.State.IsGameOver)
+                return;
+
+            string message;
+
+            if (gameManager.State.Winner.HasValue)
+                message = $"{gameManager.State.Winner.Value} 승리!";
+            else
+                message = "게임이 종료되었습니다.";
+
+            logbox.Items.Add(message);
+            gameEndMessageShown = true;
+
+            MessageBox.Show(message, "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void AddLog(string message)
+        {
+            logbox.Items.Add(message);
+
+            if (logbox.Items.Count > 0)
+            {
+                logbox.TopIndex = logbox.Items.Count - 1;
             }
         }
     }

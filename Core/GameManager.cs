@@ -70,10 +70,13 @@ namespace CardChess.Core
         // ⚔️ 이동 또는 공격 시도 (InputController가 호출함)
         public void TryMoveOrAttack(Position from, Position to)
         {
-            IPiece piece = State.GetPieceAt(from);
-            if (piece == null) return;
+            if (State.IsGameOver)
+                return;
 
-            // 정우가 만든 기물 로직(CanMove, CanAttack)을 여기서 물어봄!
+            IPiece piece = State.GetPieceAt(from);
+            if (piece == null)
+                return;
+
             bool canMove = piece.CanMove(to, State);
             bool canAttack = piece.CanAttack(to, State);
 
@@ -81,28 +84,44 @@ namespace CardChess.Core
             {
                 IPiece targetPiece = State.GetPieceAt(to);
 
+                if (targetPiece != null && targetPiece.Owner == piece.Owner)
+                    return;
+
                 if (targetPiece != null && targetPiece.Owner != piece.Owner)
                 {
-                    // [존야 방어] 타겟이 존야 상태라면 무적이므로 공격 불가능 (턴도 안 넘김)
+                    // 존야 상태면 공격 불가
                     if (targetPiece.IsFrozen)
                     {
                         Console.WriteLine("대상은 존야 상태이므로 공격할 수 없습니다!");
                         return;
                     }
 
-                    // 신성한 보호막 방어] 타겟이 보호막을 가지고 있다면?
+                    // 보호막이 있으면 보호막만 제거
                     if (targetPiece.HasShield)
                     {
-                        targetPiece.HasShield = false; // 보호막만 파괴
+                        targetPiece.HasShield = false;
                         Console.WriteLine("대상의 신성한 보호막이 공격을 1회 방어했습니다!");
 
-                        // 공격을 하긴 했으니 턴은 넘기되, 이동(덮어씌우기)은 취소함
                         EndTurn();
                         return;
                     }
 
-                    // [무덤 시스템] 일반 타격 성공 시: 적 기물을 부활용 무덤 리스트로 보냄
-                    // (주의: GameState.cs 안에 Player1DeadPieces, Player2DeadPieces 리스트가 선언되어 있어야 합니다!)
+                    // 왕을 잡으면 게임 종료
+                    if (targetPiece.Type == PieceType.King)
+                    {
+                        State.SetPieceAt(from, null);
+                        State.SetPieceAt(to, piece);
+                        piece.CurrentPosition = to;
+
+                        State.IsGameOver = true;
+                        State.Winner = piece.Owner;
+
+                        Console.WriteLine($"{piece.Owner}가 상대 킹을 잡았습니다. 게임 종료!");
+
+                        return;
+                    }
+
+                    // 일반 기물은 무덤으로 이동
                     if (targetPiece.Owner == PlayerType.Player1)
                         State.Player1DeadPieces.Add(targetPiece.Type);
                     else
@@ -110,14 +129,11 @@ namespace CardChess.Core
 
                     Console.WriteLine($"{targetPiece.Owner}의 {targetPiece.Type}이(가) 파괴되어 무덤으로 이동했습니다.");
                 }
-                // 이전 자리 비우고, 새 자리에 기물 넣기 (실제 이동 처리)
+
                 State.SetPieceAt(from, null);
                 State.SetPieceAt(to, piece);
-
-                // 기물 내부의 현재 좌표 데이터도 반드시 갱신해주어야 버그가 안 납니다!
                 piece.CurrentPosition = to;
 
-                // 행동을 마쳤으니 턴 종료
                 EndTurn();
             }
         }
@@ -125,10 +141,24 @@ namespace CardChess.Core
         // 🃏 카드 사용 시도 (InputController가 호출함)
         public void TryUseCard(ICard card, Position targetPos)
         {
-            // TODO: 나중에 정우 님이 ICard 인터페이스에 Use() 함수를 만들면 여기서 실행
-            // 예: card.Use(State, targetPos);
+            if (State.IsGameOver)
+                return;
+
+            if (card == null)
+                return;
+
             CardMgr.UseCard(card, targetPos, State.CurrentTurn);
-            // 카드 사용 후 턴 종료
+
+            // 카드는 사용해도 턴을 넘기지 않음
+            // 턴 변경은 기물 이동/공격 또는 턴 넘기기 버튼에서만 처리
+        }
+
+        // 🔄 외부에서 턴을 넘기기 위한 함수 !!!!!!!!!!임시!!!!!!!!!!
+        public void PassTurn()
+        {
+            if (State.IsGameOver)
+                return;
+
             EndTurn();
         }
 
@@ -136,6 +166,9 @@ namespace CardChess.Core
         // 🔄 턴 넘기기
         private void EndTurn()
         {
+            if (State.IsGameOver)
+                return;
+
             // 기물 상태 이상(요네 E, 존야 등) 업데이트
             UpdatePieceStatusEffects();
 
@@ -145,8 +178,11 @@ namespace CardChess.Core
             State.CurrentTurn = (State.CurrentTurn == PlayerType.Player1)
                                 ? PlayerType.Player2
                                 : PlayerType.Player1;
+
             CardMgr.DrawCard(State.CurrentTurn);
         }
+
+
         // [새로 추가할 함수] 턴이 지날 때마다 기물 상태 업데이트
         private void UpdatePieceStatusEffects()
         {
