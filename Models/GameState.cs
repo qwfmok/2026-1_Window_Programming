@@ -16,6 +16,8 @@ namespace CardChess.Core
         public Dictionary<PlayerType, List<ICard>> Hands { get; private set; }
         public Dictionary<PlayerType, List<ICard>> Traps { get; private set; }
         public Dictionary<string, int> ActiveWalls { get; private set; } = new Dictionary<string, int>();
+        public List<PieceType> Player1DeadPieces { get; set; } = new List<PieceType>();
+        public List<PieceType> Player2DeadPieces { get; set; } = new List<PieceType>();
         public bool IsGameOver { get; set; }
         public PlayerType? Winner { get; set; }
         public bool IsExtraTurnGranted { get; set; }

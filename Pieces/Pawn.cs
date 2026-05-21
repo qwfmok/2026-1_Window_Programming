@@ -12,10 +12,7 @@ namespace CardChess.Pieces
     {
         // 기물의 현재 위치, 소유자, 종류 정의
         public Position CurrentPosition { get; set; }
-
-        // 👇 문제가 되던 곳! private를 확실하게 날려버렸습니다.
         public PlayerType Owner { get; set; }
-
         public PieceType Type => PieceType.Pawn;
         public bool HasShield { get; set; } = false;          // 신성한 보호막 (공격 1회 무시)
         public bool IsFrozen { get; set; } = false;           // 존야 (무적 및 이동/공격 불가)

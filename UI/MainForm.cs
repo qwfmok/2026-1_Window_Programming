@@ -35,7 +35,10 @@ namespace CardChess
         {
             InitializeComponent();
 
-            gameManager = new GameManager();
+            this.Width = 1600;
+            this.Height = 900;
+
+            gameManager = new GameManager(); 
             inputController = new InputController(gameManager, PlayerType.Player1);
             inputController.OnLogMessage += (sender, msg) => { logbox.Items.Add(msg); };
 
@@ -44,7 +47,15 @@ namespace CardChess
             RefreshHand();
         }
 
+        // --- feat1 브랜치에서 추가된 그래픽 그리기 로직(병합 완료) 오류투성이라 일단 잠시 주석처리함---
+        //private void Assets(object sender, PaintEventArgs e)
+        //{
+        //    e.Graphics.DrawImage(chboard.Boardimage, chboard.X, chboard.Y, CardChess.Core.BoardManager.BOARD_WIDTH, CardChess.Core.BoardManager.BOARD_HEIGHT);
+        //    int cellSize = (int)(CardChess.Core.BoardManager.BOARD_WIDTH / CardChess.Core.BoardManager.MAX_COL);
+        //}
+
         // --- master 브랜치의 보드 생성 로직 ---
+
         private void CreateBoard()
         {
             int cellSize = 90;
