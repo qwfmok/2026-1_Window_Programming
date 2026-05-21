@@ -32,6 +32,11 @@ namespace CardChess
         private Button ghostCard = null;
         private Button originalCardButton = null;
         private bool gameEndMessageShown = false;
+        private UDPprotocol udpProtocol; //여기부터 아래 5개 pvp 구현때매 추가 했습니다 - 현빈
+        private TextBox txtNetworkCode;
+        private Button btnHost;
+        private Button btnJoin;
+        private Label lblNetworkStatus;
 
         public MainForm()
         {
@@ -40,7 +45,13 @@ namespace CardChess
             this.Width = 1600;
             this.Height = 900;
 
-            gameManager = new GameManager(); 
+            gameManager = new GameManager();
+            // 게임매니저의 방송을 UDP 통신으로 쏴버림
+            gameManager.OnNetworkBroadcast += (msg) =>
+            {
+                if (udpProtocol != null && udpProtocol.IsConnected)
+                    udpProtocol.Send(msg);
+            };
             inputController = new InputController(gameManager, PlayerType.Player1);
             inputController.OnLogMessage += (sender, msg) =>
             {
@@ -50,6 +61,7 @@ namespace CardChess
             CreateBoard();
             RefreshBoard();
             RefreshHand();
+            CreateNetworkUI(); // 새로 추가함
         }
 
         // --- feat1 브랜치에서 추가된 그래픽 그리기 로직(병합 완료) 오류투성이라 일단 잠시 주석처리함---
@@ -190,7 +202,7 @@ namespace CardChess
         }
 
         // ==========================================================
-        //  내 손패(Hand) UI 띄우기 및 연결 이거 쮸댄 하기 시러
+        //  내 손패(Hand) UI 띄우기 및 연결
         // ==========================================================
 
         private void RefreshHand()
@@ -259,6 +271,150 @@ namespace CardChess
 
                 // 6. 마우스가 폼 밖으로 나가도 이 카드가 마우스를 꽉 쥐고 있게 설정
                 ghostCard.Capture = true;
+            }
+        }
+        // ==========================================================
+        // 로컬 PvP 네트워크 통신 UI 및 연결 로직
+        // ==========================================================
+        private void CreateNetworkUI()
+        {
+            // 접속 코드 입력 칸
+            txtNetworkCode = new TextBox();
+            txtNetworkCode.Location = new Point(780, 740); // 손패 패널 아래쪽 빈 공간으로 이동
+            txtNetworkCode.Size = new Size(200, 30);
+            txtNetworkCode.Font = new Font("맑은 고딕", 12f);
+            txtNetworkCode.TextAlign = HorizontalAlignment.Center;
+
+            // 방 만들기 버튼 (Player1)
+            btnHost = new Button();
+            btnHost.Location = new Point(990, 735);
+            btnHost.Size = new Size(130, 40);
+            btnHost.Text = "방 만들기(Host)";
+            btnHost.Click += BtnHost_Click;
+
+            // 참여하기 버튼 (Player2)
+            btnJoin = new Button();
+            btnJoin.Location = new Point(1130, 735);
+            btnJoin.Size = new Size(130, 40);
+            btnJoin.Text = "참여하기(Guest)";
+            btnJoin.Click += BtnJoin_Click;
+
+            // 연결 상태 표시 라벨
+            lblNetworkStatus = new Label();
+            lblNetworkStatus.Location = new Point(780, 780);
+            lblNetworkStatus.Size = new Size(400, 30);
+            lblNetworkStatus.Font = new Font("맑은 고딕", 11f, FontStyle.Bold);
+            lblNetworkStatus.Text = "네트워크: 오프라인";
+
+            // 폼 화면에 추가
+            this.Controls.Add(txtNetworkCode);
+            this.Controls.Add(btnHost);
+            this.Controls.Add(btnJoin);
+            this.Controls.Add(lblNetworkStatus);
+
+            // 🌟 패널 뒤에 숨지 않도록 무조건 맨 앞으로 가져오기!
+            txtNetworkCode.BringToFront();
+            btnHost.BringToFront();
+            btnJoin.BringToFront();
+            lblNetworkStatus.BringToFront();
+        }
+
+        private void BtnHost_Click(object sender, EventArgs e)
+        {
+            udpProtocol = new UDPprotocol();
+            udpProtocol.OnMessage += UdpProtocol_OnMessage;
+
+            // 방을 파고 랜덤 코드를 받아옴
+            string code = udpProtocol.Starthostip();
+            txtNetworkCode.Text = code;
+            lblNetworkStatus.Text = "호스트 대기중... (코드 전달)";
+            AddLog($"방을 만들었습니다! 상대에게 [{code}] 코드를 알려주세요.");
+
+            // 방장은 무조건 Player1 (아래쪽)
+            inputController.MyPlayerType = PlayerType.Player1;
+            btnHost.Enabled = false;
+            btnJoin.Enabled = false;
+        }
+
+        private void BtnJoin_Click(object sender, EventArgs e)
+        {
+            string code = txtNetworkCode.Text.Trim();
+            if (string.IsNullOrEmpty(code))
+            {
+                MessageBox.Show("친구에게 받은 접속 코드를 입력해주세요!");
+                return;
+            }
+
+            udpProtocol = new UDPprotocol();
+            udpProtocol.OnMessage += UdpProtocol_OnMessage;
+
+            // 코드를 가지고 방에 접속
+            udpProtocol.Joinguestip(code);
+            lblNetworkStatus.Text = "서버 접속 시도중...";
+            AddLog("상대방의 방에 접속을 시도합니다.");
+
+            // 참가자는 무조건 Player2 (위쪽)
+            inputController.MyPlayerType = PlayerType.Player2;
+            btnHost.Enabled = false;
+            btnJoin.Enabled = false;
+        }
+
+        // 통신선(UDP)을 통해 메시지가 날아왔을 때 실행되는 함수
+        private void UdpProtocol_OnMessage(string msg)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => UdpProtocol_OnMessage(msg)));
+                return;
+            }
+
+            if (msg == "CONNECTED")
+            {
+                lblNetworkStatus.Text = "네트워크: 연결됨! 🟢";
+                lblNetworkStatus.ForeColor = Color.Green;
+                AddLog("✨ 네트워크가 연결되었습니다! 게임을 시작하세요.");
+            }
+            else if (msg.StartsWith("MOVE"))
+            {
+                // 암호 해독: MOVE,시작Row,시작Col,도착Row,도착Col <-이걸 꼭 틀리지 않게 조심하세요들!!
+                string[] p = msg.Split(',');
+                Position from = new Position(int.Parse(p[1]), int.Parse(p[2]));
+                Position to = new Position(int.Parse(p[3]), int.Parse(p[4]));
+
+                // 상대방이 조종하는 거니까 IsLocalAction을 잠깐 끄고 움직임
+                gameManager.IsLocalAction = false;
+                gameManager.TryMoveOrAttack(from, to);
+                gameManager.IsLocalAction = true;
+
+                RefreshBoard();
+                ShowGameEndMessageIfNeeded();
+            }
+            else if (msg.StartsWith("CARD"))
+            {
+                // 암호 해독: CARD,카드이름,타겟Row,타겟Col
+                string[] p = msg.Split(',');
+                string cardName = p[1];
+                Position target = new Position(int.Parse(p[2]), int.Parse(p[3]));
+
+                // 내 화면의 상대방 손패에서 해당 이름의 카드를 찾아서 씀
+                ICard cardToUse = gameManager.State.Hands[gameManager.CurrentTurn].FirstOrDefault(c => c.Name == cardName);
+                if (cardToUse != null)
+                {
+                    gameManager.IsLocalAction = false;
+                    gameManager.TryUseCard(cardToUse, target);
+                    gameManager.IsLocalAction = true;
+                }
+                RefreshBoard();
+                RefreshHand();
+            }
+            else if (msg == "PASS")
+            {
+                gameManager.IsLocalAction = false;
+                gameManager.PassTurn();
+                gameManager.IsLocalAction = true;
+
+                RefreshBoard();
+                RefreshHand();
             }
         }
 
