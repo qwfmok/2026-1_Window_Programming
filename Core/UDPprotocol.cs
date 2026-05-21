@@ -16,7 +16,7 @@ namespace CardChess.Core
         private string Hostport = "";
         public bool IsConnected { get; private set; } = false;
         public event Action<string> OnMessage;
-        private void Send(string msg)
+        public void Send(string msg) // 프라이빗에서 퍼블릭으로 수정함. - 현빈
         {
             byte[] buf = Encoding.UTF8.GetBytes(msg);
             UDPline.Send(buf, buf.Length, "127.0.0.1", Targetport);

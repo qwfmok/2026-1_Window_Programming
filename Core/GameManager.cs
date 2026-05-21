@@ -24,7 +24,8 @@ namespace CardChess.Core
             CardMgr.DrawMultiple(PlayerType.Player1, 5); //5장씩 뽑음
             CardMgr.DrawMultiple(PlayerType.Player2, 5);
         }
-
+        public bool IsLocalAction { get; set; } = true; // 무한루프 방지용이랑 네트웨크 이벤트
+        public event Action<string> OnNetworkBroadcast;
         // ♟️ 킹과 퀸은 원래 위치에, 나머지 모든 기물은 폰으로 배치하는 특수 초기화 로직
         private void InitializeBoard()
         {
@@ -100,6 +101,8 @@ namespace CardChess.Core
                     if (targetPiece.HasShield)
                     {
                         targetPiece.HasShield = false;
+                        if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+                        EndTurn(); // 내가한거 상대한테도 전송함
                         Console.WriteLine("대상의 신성한 보호막이 공격을 1회 방어했습니다!");
 
                         EndTurn();
@@ -118,7 +121,8 @@ namespace CardChess.Core
 
                         Console.WriteLine($"{piece.Owner}가 상대 킹을 잡았습니다. 게임 종료!");
 
-                        return;
+                        if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+                        return; // 위와 같이 상대에게 전송
                     }
 
                     // 일반 기물은 무덤으로 이동
@@ -134,6 +138,8 @@ namespace CardChess.Core
                 State.SetPieceAt(to, piece);
                 piece.CurrentPosition = to;
 
+                // 정상적으로 이동/공격했을 때 전송
+                if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
                 EndTurn();
             }
         }
@@ -148,17 +154,18 @@ namespace CardChess.Core
                 return;
 
             CardMgr.UseCard(card, targetPos, State.CurrentTurn);
-
+            if (IsLocalAction) OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}"); //또 전송 카드썼다고
             // 카드는 사용해도 턴을 넘기지 않음
             // 턴 변경은 기물 이동/공격 또는 턴 넘기기 버튼에서만 처리
         }
 
-        // 🔄 외부에서 턴을 넘기기 위한 함수 !!!!!!!!!!임시!!!!!!!!!!
+        // 임시였으나 내가 고쳤다!!!!
         public void PassTurn()
         {
             if (State.IsGameOver)
                 return;
 
+            if (IsLocalAction) OnNetworkBroadcast?.Invoke("PASS"); // 턴넘기기 전송
             EndTurn();
         }
 
