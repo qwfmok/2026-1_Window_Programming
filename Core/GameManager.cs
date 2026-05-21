@@ -143,10 +143,6 @@ namespace CardChess.Core
                                 ? PlayerType.Player2
                                 : PlayerType.Player1;
             CardMgr.DrawCard(State.CurrentTurn);
-            State.CurrentTurn = (State.CurrentTurn == PlayerType.Player1)
-                                ? PlayerType.Player2
-                                : PlayerType.Player1;
-            CardMgr.DrawCard(State.CurrentTurn);
         }
         // [새로 추가할 함수] 턴이 지날 때마다 기물 상태 업데이트
         private void UpdatePieceStatusEffects()
