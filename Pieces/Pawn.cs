@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CardChess.Models;
 using CardChess.Core;
+
 namespace CardChess.Pieces
 {
     public class Pawn : IPiece
@@ -17,6 +18,7 @@ namespace CardChess.Pieces
         public bool IsFrozen { get; set; } = false;           // 존야 (무적 및 이동/공격 불가)
         public Position? ShadowPosition { get; set; } = null; // 영혼 해방 (돌아갈 원본 위치, nullable)
         public int ShadowTurns { get; set; } = 0;             // 영혼 해방 (남은 턴 수)
+
         // 생성자: 초기 주인과 위치 설정
         public Pawn(PlayerType owner, Position position)
         {
@@ -28,7 +30,6 @@ namespace CardChess.Pieces
         public List<Position> GetMovablePositions(GameState state)
         {
             List<Position> moves = new List<Position>();
-
             // [존야 방어 로직] 얼어붙은 상태라면 아무 데도 갈 수 없음! (빈 리스트 반환)
             if (IsFrozen) return moves;
 
@@ -59,18 +60,16 @@ namespace CardChess.Pieces
         public List<Position> GetAttackablePositions(GameState state)
         {
             List<Position> attacks = new List<Position>();
-
             // [존야 방어 로직] 얼어붙은 상태라면 아무 데도 갈 수 없음! (빈 리스트 반환)
             if (IsFrozen) return attacks;
 
             int direction = (Owner == PlayerType.Player1) ? -1 : 1;
-
             // 왼쪽 대각선(-1), 오른쪽 대각선(+1) 체크
             int[] sideOffsets = { -1, 1 };
+
             foreach (int side in sideOffsets)
             {
                 Position diag = new Position(CurrentPosition.Row + direction, CurrentPosition.Col + side);
-
                 if (state.IsWithinBoard(diag))
                 {
                     // 공격하려는 대각선 칸에 '애니비아 벽'이 깔려있다면?
@@ -92,7 +91,6 @@ namespace CardChess.Pieces
         }
 
         // 타겟 좌표가 이동 가능한 리스트에 있는지 확인
-        // [수정됨] Contains 버그를 방지하기 위해 Any 방식으로 교체
         public bool CanMove(Position target, GameState state)
         {
             return GetMovablePositions(state).Any(p => p.Row == target.Row && p.Col == target.Col);

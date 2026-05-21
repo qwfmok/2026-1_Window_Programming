@@ -163,6 +163,22 @@ namespace CardChess.Cards
                     break;
             }
         }
+        // 1. 기물 생성기 (부활, 복제에 사용)
+        private IPiece CreatePiece(PieceType type, PlayerType owner, Position pos)
+        {
+            switch (type)
+            {
+                case PieceType.Pawn: return new Pawn(owner, pos);
+                case PieceType.Knight: return new Knight(owner, pos);
+                case PieceType.Bishop: return new Bishop(owner, pos);
+                case PieceType.Rook: return new Rook(owner, pos);
+                case PieceType.Queen: return new Queen(owner, pos);
+                case PieceType.King: return new King(owner, pos);
+                default: return new Pawn(owner, pos);
+            }
+        }
+
+        // 2. 체스판 위 모든 기물 가져오기 (위치 교환 스킬에 사용)
         private List<IPiece> GetAllPieces(GameState state)
         {
             List<IPiece> list = new List<IPiece>();
@@ -172,6 +188,7 @@ namespace CardChess.Cards
             return list;
         }
 
+        // 3. 주변 빈칸 찾기 (복제 스킬에 사용)
         private List<Position> GetAdjacentEmptyPositions(Position center, GameState state)
         {
             List<Position> emptyPos = new List<Position>();
@@ -187,20 +204,6 @@ namespace CardChess.Cards
                 }
             }
             return emptyPos;
-        }
-
-        private IPiece CreatePiece(PieceType type, PlayerType owner, Position pos)
-        {
-            switch (type)
-            {
-                case PieceType.Pawn: return new Pawn(owner, pos);
-                case PieceType.Bishop: return new Bishop(owner, pos);
-                case PieceType.King: return new King(owner, pos);
-                case PieceType.Rook: return new Rook(owner, pos);
-                case PieceType.Knight: return new Knight(owner, pos);
-                case PieceType.Queen: return new Queen(owner, pos);
-                default: return new Pawn(owner, pos);
-            }
         }
     }
 }
