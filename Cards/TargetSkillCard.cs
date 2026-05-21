@@ -46,20 +46,25 @@ namespace CardChess.Cards
                         return targetPos.Row >= 0 && targetPos.Row <= 3;
                     }
                 case "컨트롤 탈취":
-                    // 킹을 제외한 '상대방 기물'에만 사용 가능
-                    return piece != null && piece.Owner != myPlayer && piece.Type != PieceType.King;
+                    // 킹, 퀸을 제외한 '상대방 기물'에만 사용 가능
+                    return piece != null && piece.Owner != myPlayer && piece.Type != PieceType.King && piece.Type != PieceType.Queen;
 
+                //  순수하게 '내 기물' 전체(킹 포함)에 쓸 수 있는 스킬들
                 case "기물 위치교환":
                 case "신성한 보호막":
-                case "복제":
                 case "영혼 해방":
-                    // '내 기물'에만 사용 가능 (위치교환은 내 기물끼리 랜덤 스왑한다고 가정)
+                case "존야": 
                     return piece != null && piece.Owner == myPlayer;
 
-                case "존야":
+                // '내 기물' + '주변 빈칸'이 필요한 스킬
+                case "복제":
+                    if (piece == null || piece.Owner != myPlayer) return false;
+                    return GetAdjacentEmptyPositions(targetPos, state).Count > 0;
+
+                // '내 기물'이지만 '킹은 제외'해야 하는 스킬
                 case "판도라":
-                    // 아군 적군 상관없이 '아무 기물'이나 지정 가능 (킹 제외하고 싶다면 추가 처리)
-                    return piece != null && piece.Type != PieceType.King;
+                    // 판도라로 내 킹을 변이시키면 게임이 터지므로 킹은 제외!
+                    return piece != null && piece.Owner == myPlayer && piece.Type != PieceType.King;
 
                 default:
                     return true;
@@ -137,13 +142,64 @@ namespace CardChess.Cards
                     break;
 
                 case "부활":
-                    // 💡 참고: GameState에 public List<PieceType> DeadPieces = new List<PieceType>(); 를 만들어 두어야 합니다.
-                    // 현재 죽은 기물 목록을 가져와서 부활시킨다고 가정 (여기서는 임시로 랜덤 부활)
-                    PieceType resurrectedType = PieceType.Knight; // 실제로는 state.DeadPieces 등에서 팝(Pop)
-                    IPiece resPiece = CreatePiece(resurrectedType, myPlayer, targetPos);
-                    state.SetPieceAt(targetPos, resPiece);
-                    Console.WriteLine($"[{Name}] 빈칸에 {resurrectedType} 기물이 부활했습니다.");
+                    // 내 무덤 리스트 가져오기
+                    var myGraveyard = (myPlayer == PlayerType.Player1) ? state.Player1DeadPieces : state.Player2DeadPieces;
+
+                    if (myGraveyard.Count > 0)
+                    {
+                        // 💡 가장 마지막에 죽은 기물을 꺼냅니다. 
+                        // (원한다면 rand.Next()를 써서 무덤 속 기물 중 랜덤으로 살릴 수도 있습니다)
+                        int lastIndex = myGraveyard.Count - 1;
+                        PieceType resurrectedType = myGraveyard[lastIndex];
+
+                        // 부활시킬 거니까 무덤 리스트에서는 삭제 (Pop)
+                        myGraveyard.RemoveAt(lastIndex);
+
+                        // 실제 기물 생성 및 보드 배치
+                        IPiece resPiece = CreatePiece(resurrectedType, myPlayer, targetPos);
+                        state.SetPieceAt(targetPos, resPiece);
+                        Console.WriteLine($"[{Name}] 빈칸에 {resurrectedType} 기물이 성공적으로 부활했습니다!");
+                    }
                     break;
+            }
+        }
+        private List<IPiece> GetAllPieces(GameState state)
+        {
+            List<IPiece> list = new List<IPiece>();
+            for (int r = 0; r < 8; r++)
+                for (int c = 0; c < 8; c++)
+                    if (state.Board[r, c] != null) list.Add(state.Board[r, c]);
+            return list;
+        }
+
+        private List<Position> GetAdjacentEmptyPositions(Position center, GameState state)
+        {
+            List<Position> emptyPos = new List<Position>();
+            int[] dRow = { -1, 1, 0, 0, -1, -1, 1, 1 };
+            int[] dCol = { 0, 0, -1, 1, -1, 1, -1, 1 };
+
+            for (int i = 0; i < 8; i++)
+            {
+                Position check = new Position(center.Row + dRow[i], center.Col + dCol[i]);
+                if (state.IsWithinBoard(check) && state.GetPieceAt(check) == null)
+                {
+                    emptyPos.Add(check);
+                }
+            }
+            return emptyPos;
+        }
+
+        private IPiece CreatePiece(PieceType type, PlayerType owner, Position pos)
+        {
+            switch (type)
+            {
+                case PieceType.Pawn: return new Pawn(owner, pos);
+                case PieceType.Bishop: return new Bishop(owner, pos);
+                case PieceType.King: return new King(owner, pos);
+                case PieceType.Rook: return new Rook(owner, pos);
+                case PieceType.Knight: return new Knight(owner, pos);
+                case PieceType.Queen: return new Queen(owner, pos);
+                default: return new Pawn(owner, pos);
             }
         }
     }
