@@ -10,8 +10,12 @@ namespace CardChess.Pieces
     public interface IPiece
     {
         Position CurrentPosition { get; set; }
-        PlayerType Owner { get; }
+        PlayerType Owner { get; set; }
         PieceType Type { get; }
+        bool HasShield { get; set; }        // 신성한 보호막 여부
+        bool IsFrozen { get; set; }         // 존야(무적/정지) 여부
+        Position? ShadowPosition { get; set; } // 영혼 해방(요네 E) 돌아갈 위치
+        int ShadowTurns { get; set; }       // 영혼 해방 남은 턴 수
 
         // 이동 가능한 모든 좌표 반환
         List<Position> GetMovablePositions(GameState state);

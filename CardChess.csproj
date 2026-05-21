@@ -54,6 +54,7 @@
     <Compile Include="Cards\TrapCard.cs" />
     <Compile Include="Core\BattleManager.cs" />
     <Compile Include="Core\BoardManager.cs" />
+    <Compile Include="Core\CardManager.cs" />
     <Compile Include="Core\UDPprotocol.cs" />
     <Compile Include="Core\GameManager.cs" />
     <Compile Include="Core\TurnManager.cs" />
