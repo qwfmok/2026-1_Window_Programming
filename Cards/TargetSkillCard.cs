@@ -77,6 +77,12 @@ namespace CardChess.Cards
             PlayerType myPlayer = state.CurrentTurn;
             Random rand = new Random();
 
+            if (Name != "부활" && targetPiece == null)
+            {
+                Console.WriteLine($"[{Name}] 타겟 기물이 존재하지 않아 스킬이 허공에 빗나갔습니다!");
+                return;
+            }
+
             switch (Name)
             {
                 case "신성한 보호막":
