@@ -86,6 +86,16 @@ namespace CardChess.Core
             Task.Run(() => ReceiveLoop());
             return "READY";
         }
+        // 끝나면 돌아오게
+        public void Close()
+        {
+            if (UDPline != null)
+            {
+                try { UDPline.Close(); } catch { }
+                UDPline = null;
+            }
+            IsConnected = false;
+        }
 
         public void Joinguestip(string code, int localport = 9001, int targetport = 9000)
         {

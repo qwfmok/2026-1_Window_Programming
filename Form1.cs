@@ -28,7 +28,8 @@ namespace CardChess
         private PlayerType myPlayerType;
         private TextBox txtNetworkCode;
         private Label lblNetworkStatus;
-
+        private bool isGameLaunched = false; // 중복창 버그 방지
+        private int sharedSeed;
         // 주 진입점
 
         public Form1()
@@ -229,7 +230,7 @@ namespace CardChess
         {
             if (this.InvokeRequired)
             {
-                this.Invoke(new Action(() => UdpProtocol_OnMessage(msg)));
+                this.BeginInvoke(new Action(() => UdpProtocol_OnMessage(msg)));
                 return;
             }
 
@@ -241,33 +242,66 @@ namespace CardChess
                 this.Invalidate(); // 버튼 상태(활성화 등)를 다시 그리기 위해 화면 갱신
             }
             // 2. 방장이 보낸 게임 시작 동기화 패킷 처리 (게스트용)
-            else if (msg == "START")
+            else if (msg.StartsWith("START"))
             {
+                // 방장이 보낸 패킷(START,12345)을 쪼개서 내 시드로함
+                string[] parts = msg.Split(',');
+                if (parts.Length > 1)
+                {
+                    sharedSeed = int.Parse(parts[1]);
+                }
                 LaunchMainGame();
             }
         }
 
-        private void HandleGameStart() // 게임 시작 핸들러
+        private void HandleGameStart()
         {
-            // 방장이 START를 누르면
+            if (myPlayerType == PlayerType.Player2)
+            {
+                MessageBox.Show("방장(Host)이 게임을 시작할 때까지 대기해 주세요!", "대기 중", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             if (myPlayerType == PlayerType.Player1)
             {
-                udpProtocol.Send("START");
-                // 게스트에게 START라는 패킷을 전송하고 상대방이 이걸 수신하면 게임이 시작되는 방식
+                // 방장만 무작위 시드 생성
+                sharedSeed = new Random().Next(10000, 99999);
+                // 상대방한테 시드 쏘기
+                udpProtocol.Send($"START,{sharedSeed}");
             }
-            // 본인 화면 인게임으로 전환
             LaunchMainGame();
         }
 
         private void LaunchMainGame()
         {
-            // 메인 폼에 접속됐으면 기존 폼은 해체
-            udpProtocol.OnMessage -= UdpProtocol_OnMessage;
-            MainForm gameForm = new MainForm(udpProtocol, myPlayerType);
+            // 이미 게임창이 켜졌다면 패킷이 중복으로 날아와도 무조건 차단
+            if (isGameLaunched) return;
+            isGameLaunched = true;
 
-            this.Hide();
-            gameForm.ShowDialog();
-            this.Close();
+            // 메인 폼으로 넘어갈 때 기존 로비의 수신기를 끔
+            udpProtocol.OnMessage -= UdpProtocol_OnMessage;
+            MainForm gameForm = new MainForm(udpProtocol, myPlayerType, sharedSeed);
+
+            this.Hide();           // 로비 화면을 잠깐 숨김
+            gameForm.ShowDialog(); //  게임 화면을 띄움 (게임이 끝날 때까지 여기서 코드가 멈춤)
+
+
+            // 네트워크 상태 초기화 및 소켓 닫기
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
+                udpProtocol = null;
+            }
+
+            // 라벨을 오프라인으로 돌려서 시작 버튼 자동 잠금
+            lblNetworkStatus.Text = "네트워크: 오프라인";
+            lblNetworkStatus.ForeColor = Color.White;
+
+            //  게임이 완벽히 종료되었으므로 플래그를 해제하여 다음 판 재시작을 허용함
+            isGameLaunched = false;
+
+            //  다시 로비 화면을 짠! 하고 보여주고 화면 그래픽 새로고침
+            this.Show();
+            this.Invalidate();
         }
 
         private void HandleCredit() // 크레딧 핸들러 그냥 넣어봤다 아쉽잖아 ㄹㅇㅋㅋ

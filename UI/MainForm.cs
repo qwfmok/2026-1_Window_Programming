@@ -51,7 +51,7 @@ namespace CardChess
 
         // 진입점
 
-        public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType)
+        public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType, int seed)
         {
             InitializeComponent();
 
@@ -61,7 +61,6 @@ namespace CardChess
 
             // 폼이 생성될 때 자기 자신을 Instance 변수에 등록
             Instance = this;
-            gameManager = new GameManager();
 
             // 메인폼 배경 이미지 설정 경로는 동일하게 바이너리/디버그의 에셋 폴더
             string bgPath = Path.Combine(Application.StartupPath, "Assets", "bg.png");
@@ -86,7 +85,7 @@ namespace CardChess
                 this.udpProtocol.OnMessage += UdpProtocol_OnMessage;
             }
 
-            this.gameManager = new GameManager();
+            this.gameManager = new GameManager(seed);
             this.inputController = new InputController(this.gameManager, assignedPlayerType);
             this.inputController.MyPlayerType = assignedPlayerType;
 
@@ -389,7 +388,7 @@ namespace CardChess
         {
             if (this.InvokeRequired)
             {
-                this.Invoke(new Action(() => UdpProtocol_OnMessage(msg)));
+                this.BeginInvoke(new Action(() => UdpProtocol_OnMessage(msg)));
                 return;
             }
 
@@ -411,6 +410,15 @@ namespace CardChess
                 gameManager.IsLocalAction = false;
                 gameManager.TryMoveOrAttack(from, to, out _);
                 gameManager.IsLocalAction = true;
+
+                // 🌟 추가됨: 상대방 행동 로그 출력
+                AddLog($"[네트워크] 상대방이 ({from.Row}, {from.Col})에서 ({to.Row}, {to.Col})(으)로 기물을 이동했습니다.");
+
+                // 🌟 핵심: 내부 이동 처리 후 멈춰있던 애니메이션과 화면을 강제로 갱신!
+                boardView.HandleMovementAnimation();
+                RefreshBoard();
+                RefreshHand();
+                ShowGameEndMessageIfNeeded();
             }
             else if (msg.StartsWith("CARD"))
             {
@@ -424,14 +432,32 @@ namespace CardChess
                     gameManager.IsLocalAction = false;
                     gameManager.TryUseCard(cardToUse, target, out _);
                     gameManager.IsLocalAction = true;
+
+                    // 상대방 카드 로그 출력
+                    AddLog($"[네트워크] 상대방이 '{cardName}' 카드를 사용했습니다!");
                 }
+                else
+                {
+                    // 덱이 엇갈려서 카드를 못 찾았을 때 확실하게 알려주는 에러 로그
+                    AddLog($"[동기화 오류] 상대방이 '{cardName}'을(를) 썼지만, 내 화면의 상대 손패에는 그 카드가 없습니다! ");
+                }
+
+                // 🌟 핵심: 화면 및 애니메이션 갱신
+                boardView.HandleMovementAnimation();
                 RefreshBoard();
+                RefreshHand();
+                ShowGameEndMessageIfNeeded();
             }
             else if (msg == "PASS")
             {
                 gameManager.IsLocalAction = false;
                 gameManager.PassTurn();
                 gameManager.IsLocalAction = true;
+
+                AddLog("[네트워크] 상대방이 턴을 넘겼습니다.");
+
+                RefreshBoard();
+                RefreshHand();
             }
             else if (msg == "SURRENDER")
             {
@@ -450,6 +476,7 @@ namespace CardChess
             logbox.Items.Add(message);
             gameEndMessageShown = true;
             MessageBox.Show(message, "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            this.Close();
         }
 
         public void AddLog(string message)
@@ -570,16 +597,22 @@ namespace CardChess
             this.Controls.Add(this.pnlOpponentHand);
             this.Name = "MainForm";
             this.Text = "Card Chess Game";
-            this.Load += new System.EventHandler(this.MainForm_Load);
             this.pnlPlayerHand.ResumeLayout(false);
             this.pnlOpponentHand.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
-
-        private void MainForm_Load(object sender, EventArgs e)
+        // 폼이 닫힐 때(게임이 끝날 때) 무조건 실행되는 안전장치
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
-
+            if (udpProtocol != null)
+            {
+                // 상대방에게 "나 나간다!" 라고 알려주고 통신선을 끊음
+                if (udpProtocol.IsConnected) udpProtocol.Send("SURRENDER");
+                udpProtocol.Close();
+            }
+            base.OnFormClosed(e);
         }
+        
     }
 }

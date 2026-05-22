@@ -9,15 +9,16 @@ namespace CardChess.Core
     public class CardManager
     {
         private GameState _state;
-        private Random _random = new Random();
+        private Random _random;
 
         public CardManager(GameState state)
         {
             _state = state;
         }
 
-        public void InitializeDecks()
+        public void InitializeDecks(int seed)
         {
+            _random = new Random(seed);
             List<ICard> deckList = new List<ICard>();
 
             // 40장을 맞추기 위해 전체 카드 세트를 2번 반복해서 넣습니다 (총 42장)
