@@ -148,6 +148,9 @@ namespace CardChess
             pnlBoard.Paint += (s, e) => boardView.DrawBoard(e.Graphics);
             pnlBoard.MouseClick += PnlBoard_MouseClick;
 
+            pnlBoard.MouseMove += PnlBoard_MouseMove;
+            pnlBoard.MouseLeave += PnlBoard_MouseLeave;
+
             pnlBoard.AllowDrop = true;
             pnlBoard.DragEnter += BoardPanel_DragEnter;
             pnlBoard.DragDrop += BoardPanel_DragDrop;
@@ -185,6 +188,7 @@ namespace CardChess
                 inputController.OnBoardClicked(position);
                 boardView.HandleMovementAnimation();
 
+                UpdateBoardHighlights(position);
                 ShowGameEndMessageIfNeeded();
             }
         }
@@ -485,11 +489,80 @@ namespace CardChess
             if (logbox.Items.Count > 0) logbox.TopIndex = logbox.Items.Count - 1;
         }
 
-        /* ==================== 메인 폼 내의 기본 윈도우 컨트롤 템플릿에 관련된 코드 ==================== */
-        /* ==================== 메인 폼 내의 기본 윈도우 컨트롤 템플릿에 관련된 코드 ==================== */
-        /* ==================== 메인 폼 내의 기본 윈도우 컨트롤 템플릿에 관련된 코드 ==================== */
-        /* ==================== 메인 폼 내의 기본 윈도우 컨트롤 템플릿에 관련된 코드 ==================== */
-        /* ==================== 메인 폼 내의 기본 윈도우 컨트롤 템플릿에 관련된 코드 ==================== */
+        // 마우스 이전 위치 기억용
+        private Position? lastHoveredPos = null;
+
+        // 마우스가 체스판 위를 돌아다닐 때 매 프레임 실행됨
+        private void PnlBoard_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!battleManager.IsPlayable || gameManager.State.IsGameOver) return;
+
+            if (boardView.TryConvertPixelToPosition(e.X, e.Y, out Position position))
+            {
+                // 같은 칸 위를 맴돌 때는 계산 낭비 방지
+                if (lastHoveredPos.HasValue && lastHoveredPos.Value.Equals(position)) return;
+
+                lastHoveredPos = position;
+                boardView.HoveredCell = position;
+                UpdateBoardHighlights(position);
+                pnlBoard.Invalidate();
+            }
+        }
+
+        // 마우스가 체스판 밖으로 나갔을 때
+        private void PnlBoard_MouseLeave(object sender, EventArgs e)
+        {
+            lastHoveredPos = null;
+            boardView.HoveredCell = null;
+
+            // 기물을 들고 있는(선택한) 상태가 아니라면 불빛 끄기
+            if (inputController.CurrentState != InputState.PieceSelected)
+            {
+                boardView.MoveHighlights.Clear();
+                boardView.AttackHighlights.Clear();
+            }
+            pnlBoard.Invalidate();
+        }
+
+        // 🌟 갈 수 있는 곳을 계산해서 넘겨주는 핵심 마법 함수
+        private void UpdateBoardHighlights(Position hoverPos)
+        {
+            IPiece targetPiece = null;
+
+            // 1. 이미 내 기물을 클릭해서(들고) 있다면, 그 기물 기준으로 고정
+            if (inputController.CurrentState == InputState.PieceSelected && inputController.SelectedPosition.HasValue)
+            {
+                targetPiece = gameManager.State.GetPieceAt(inputController.SelectedPosition.Value);
+            }
+            // 2. 빈손(Idle)일 때 내 턴이고 내 기물에 마우스를 올렸다면 그 기물 정보 가져오기
+            else if (inputController.CurrentState == InputState.Idle && gameManager.CurrentTurn == inputController.MyPlayerType)
+            {
+                IPiece hoverPiece = gameManager.State.GetPieceAt(hoverPos);
+                if (hoverPiece != null && hoverPiece.Owner == inputController.MyPlayerType)
+                    targetPiece = hoverPiece;
+            }
+
+            // 하이라이트 계산
+            if (targetPiece != null)
+            {
+                // 이동 가능 칸 계산
+                var movables = targetPiece.GetMovablePositions(gameManager.State);
+                // 공격 가능 칸 계산
+                var attackables = targetPiece.GetAttackablePositions(gameManager.State);
+
+                // 화면에 뿌려줄 불빛 리스트 정리 (적 기물이 있는 곳은 빨간불, 빈칸은 초록불)
+                boardView.AttackHighlights = attackables
+                    .Where(p => gameManager.State.GetPieceAt(p) != null && gameManager.State.GetPieceAt(p).Owner != targetPiece.Owner).ToList();
+
+                boardView.MoveHighlights = movables
+                    .Where(p => !boardView.AttackHighlights.Contains(p)).ToList(); // 빨간불 들어간 곳은 초록불에서 제외
+            }
+            else
+            {
+                boardView.MoveHighlights.Clear();
+                boardView.AttackHighlights.Clear();
+            }
+        }
 
         private void InitializeComponent()
         {

@@ -28,6 +28,14 @@ namespace CardChess.View
 
         public Dictionary<IPiece, PieceAnime> PieceAnimations => pieceAnimations;
         // =======================================================
+        // 하이라이트(불빛)용 변수들
+        // =======================================================
+        public List<Position> MoveHighlights { get; set; } = new List<Position>();
+        public List<Position> AttackHighlights { get; set; } = new List<Position>();
+        public Position? HoveredCell { get; set; } = null; // 현재 마우스가 올라간 칸
+        // =======================================================
+
+        // =======================================================
         //  시점(Player1/Player2) 반전용 변수와 함수
         // =======================================================
         public PlayerType MyPlayerType { get; set; } = PlayerType.Player1;
@@ -175,7 +183,42 @@ namespace CardChess.View
                 // 벽 그리기 전체 로직이 터지더라도 그냥 넘어갑니다. (기물은 그려야 하니까)
             }
             // =========================================================================================
+            if (MoveHighlights != null && MoveHighlights.Count > 0)
+            {
+                using (SolidBrush moveBrush = new SolidBrush(Color.FromArgb(100, 144, 238, 144))) // 반투명 초록색
+                {
+                    foreach (var pos in MoveHighlights)
+                    {
+                        int vRow = GetVisualRow(pos.Row);
+                        int vCol = GetVisualCol(pos.Col);
+                        g.FillRectangle(moveBrush, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                    }
+                }
+            }
 
+            if (AttackHighlights != null && AttackHighlights.Count > 0)
+            {
+                using (SolidBrush attackBrush = new SolidBrush(Color.FromArgb(100, 255, 99, 71))) // 반투명 빨간색
+                {
+                    foreach (var pos in AttackHighlights)
+                    {
+                        int vRow = GetVisualRow(pos.Row);
+                        int vCol = GetVisualCol(pos.Col);
+                        g.FillRectangle(attackBrush, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                    }
+                }
+            }
+
+            // 마우스 올린 칸에 노란색 테두리 그리기
+            if (HoveredCell.HasValue)
+            {
+                using (Pen hoverPen = new Pen(Color.Gold, 3))
+                {
+                    int vRow = GetVisualRow(HoveredCell.Value.Row);
+                    int vCol = GetVisualCol(HoveredCell.Value.Col);
+                    g.DrawRectangle(hoverPen, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                }
+            }
             // 기물 렌더링
             foreach (var anime in pieceAnimations.Values)
             {
