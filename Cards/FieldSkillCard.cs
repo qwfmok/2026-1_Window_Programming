@@ -29,10 +29,32 @@ namespace CardChess.Cards
             }  
         }
 
-        public bool CanUse(Position targetPos, GameState state)
+        public bool CanUse(Position targetPos, GameState state) // 정우가 수정
         {
             // 해당 칸이 비어있어야 설치 가능
-            return state.IsWithinBoard(targetPos) && state.GetPieceAt(targetPos) == null;
+            if (!state.IsWithinBoard(targetPos) || state.GetPieceAt(targetPos) != null)
+            {
+                return false;
+            }
+
+            // '폰 소환' 카드일 경우에만 아군 진영인지 추가로 검사
+            if (Name == "폰 소환")
+            {
+                PlayerType myPlayer = state.CurrentTurn;
+
+                if (myPlayer == PlayerType.Player1)
+                {
+                    // 1P 진영: 보드판 아래쪽 절반 (Row 4 ~ 7)
+                    return targetPos.Row >= 4 && targetPos.Row <= 7;
+                }
+                else
+                {
+                    // 2P 진영: 보드판 위쪽 절반 (Row 0 ~ 3)
+                    return targetPos.Row >= 0 && targetPos.Row <= 3;
+                }
+            }
+
+            return true;
         }
 
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
