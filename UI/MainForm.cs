@@ -25,7 +25,6 @@ namespace CardChess
         private Panel pnlPlayerHand;
         private Panel pnlPlayerDeck;
         private Panel pnlBoard; // 중앙 패널보드 여기에 보드들어감 수정하다가 이거없어져서 ㅈ될뻔
-        private Panel pnlDrawArea;
         private Panel pnlPlayArea;
         private ListBox logbox;
         private Panel pnlOpponentDeck;
@@ -426,7 +425,6 @@ namespace CardChess
             this.pnlPlayerHand = new System.Windows.Forms.Panel();
             this.pnlPlayerDeck = new System.Windows.Forms.Panel();
             this.pnlBoard = new System.Windows.Forms.Panel();
-            this.pnlDrawArea = new System.Windows.Forms.Panel();
             this.pnlPlayArea = new System.Windows.Forms.Panel();
             this.logbox = new System.Windows.Forms.ListBox();
             this.pnlOpponentDeck = new System.Windows.Forms.Panel();
@@ -461,14 +459,6 @@ namespace CardChess
             this.pnlBoard.Size = new System.Drawing.Size(720, 720);
             this.pnlBoard.TabIndex = 10;
             // 
-            // pnlDrawArea
-            // 
-            this.pnlDrawArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlDrawArea.Location = new System.Drawing.Point(1169, 268);
-            this.pnlDrawArea.Name = "pnlDrawArea";
-            this.pnlDrawArea.Size = new System.Drawing.Size(120, 180);
-            this.pnlDrawArea.TabIndex = 14;
-            // 
             // pnlPlayArea
             // 
             this.pnlPlayArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -483,7 +473,7 @@ namespace CardChess
             this.logbox.ItemHeight = 18;
             this.logbox.Location = new System.Drawing.Point(829, 268);
             this.logbox.Name = "logbox";
-            this.logbox.Size = new System.Drawing.Size(334, 184);
+            this.logbox.Size = new System.Drawing.Size(460, 184);
             this.logbox.TabIndex = 11;
             // 
             // pnlOpponentDeck
@@ -531,7 +521,6 @@ namespace CardChess
             this.Controls.Add(this.btnPassTurn);
             this.Controls.Add(this.pnlPlayerHand);
             this.Controls.Add(this.pnlBoard);
-            this.Controls.Add(this.pnlDrawArea);
             this.Controls.Add(this.pnlPlayArea);
             this.Controls.Add(this.logbox);
             this.Controls.Add(this.pnlOpponentHand);
