@@ -138,7 +138,7 @@ namespace CardChess.Cards
                         }
 
                         // 카드 자체의 Execute를 즉시 실행! (CardManager는 인자로 받은 것 그대로 배달)
-                        Console.WriteLine($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
+                        MainForm.Instance.AddLog($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
                         randomCard.Execute(randomPos, state, cardManager);
                     }
                 }
