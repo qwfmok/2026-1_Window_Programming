@@ -40,7 +40,7 @@ namespace CardChess.Core
 
                 // 3. 액티브 스킬 카드 추가
                 deckList.Add(new ActiveSkillCard("욕망의 항아리", "덱에서 카드를 2장 뽑습니다."));
-                deckList.Add(new ActiveSkillCard("패 털이", "양 플레이어 모두 손패를 버리고, 버린 장수만큼 다시 뽑습니다."));
+                deckList.Add(new ActiveSkillCard("패 털이", "사용한 플레이어 모두 손패를 버리고, 버린 장수만큼 다시 뽑습니다."));
                 deckList.Add(new ActiveSkillCard("카드 뺏기", "상대의 손패 중 1장을 무작위로 빼앗아옵니다."));
                 deckList.Add(new ActiveSkillCard("턴 추가", "상대의 다음 턴을 스킵하고 내 턴을 한 번 더 진행합니다."));
                 deckList.Add(new ActiveSkillCard("랜덤 실행", "내 덱에서 카드 2장을 무작위로 뽑아 즉시 시전합니다."));
@@ -83,6 +83,10 @@ namespace CardChess.Core
                 {
                     _state.Hands[player].Add(card);
                 }
+            }
+            else
+            {
+                MainForm.Instance.AddLog($"[경고] {player}의 덱에 남은 카드가 모두 소진되어 더 이상 뽑을 수 없습니다!");
             }
         }
         public void DrawMultiple(PlayerType player, int count)

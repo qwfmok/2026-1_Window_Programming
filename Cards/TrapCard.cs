@@ -35,7 +35,7 @@ namespace CardChess.Cards
             if (state.Traps.ContainsKey(myPlayer))
             {
                 state.Traps[myPlayer].Add(this);
-                Console.WriteLine($"[함정 설치] {myPlayer}가 비밀리에 [{Name}] 함정을 설치했습니다.");
+                MainForm.Instance.AddLog($"[함정 설치] {myPlayer}가 비밀리에 [{Name}] 함정을 설치했습니다.");
             }
 
             // 손패에서 제거하는 작업은 CardManager.UseCard에서 알아서 처리하므로 
@@ -49,13 +49,13 @@ namespace CardChess.Cards
         {
             if (Name == "동전 던지기")
             {
-                Console.WriteLine($"[함정 발동] '동전 던지기' 함정이 작동합니다!");
+                MainForm.Instance.AddLog($"[함정 발동] '동전 던지기' 함정이 작동합니다!");
 
                 Random rand = new Random();
                 // 50% 확률 (0: 앞면/반사성공, 1: 뒷면/불발)
                 if (rand.Next(0, 2) == 0)
                 {
-                    Console.WriteLine(" -> 🪙 동전 앞면! 공격이 반사되어 공격 기물이 역으로 파괴됩니다!");
+                    MainForm.Instance.AddLog(" -> 🪙 동전 앞면! 공격이 반사되어 공격 기물이 역으로 파괴됩니다!");
 
                     // 공격하러 들어온 상대 기물을 체스판에서 지워버림
                     state.SetPieceAt(fromPos, null);
@@ -64,7 +64,7 @@ namespace CardChess.Cards
                 }
                 else
                 {
-                    Console.WriteLine(" -> 🪙 동전 뒷면... 함정이 불발되었습니다. 공격이 그대로 진행됩니다.");
+                    MainForm.Instance.AddLog(" -> 🪙 동전 뒷면... 함정이 불발되었습니다. 공격이 그대로 진행됩니다.");
                     return false; // 반사 실패 신호
                 }
             }

@@ -75,9 +75,13 @@ namespace CardChess.Input
                     else // 다른거 고르면 그곳으로 이동 시도
                     {
                         SendLog($"{SelectedPosition.Value.Row}, {SelectedPosition.Value.Col} 에서 {clickedPos.Row}, {clickedPos.Col}(으)로 이동/공격 시도!");
-
-                        // GameManager로 이동 명령 전달
-                        gameManager.TryMoveOrAttack(SelectedPosition.Value, clickedPos);
+                        string moveErrorMsg;
+                        bool moveSuccess = gameManager.TryMoveOrAttack(SelectedPosition.Value, clickedPos, out moveErrorMsg);
+                        
+                        if (!moveSuccess)
+                        {
+                            SendLog($"[실패] {moveErrorMsg}");
+                        }
                         CancelSelection(); // 다시 빈손
                     }
                     break;
@@ -85,8 +89,14 @@ namespace CardChess.Input
                 case InputState.CardSelected: // 카드 들고있을 때
                     SendLog($"선택한 카드를 {clickedPos.Row}, {clickedPos.Col} 에 사용 시도!");
 
-                    // GameManager로 카드 사용 명령 전달
-                    gameManager.TryUseCard(SelectedCard, clickedPos);
+                    // [수정됨] 카드 에러 메시지를 받아서 실패 시 로그에 띄웁니다!
+                    string cardErrorMsg;
+                    bool cardSuccess = gameManager.TryUseCard(SelectedCard, clickedPos, out cardErrorMsg);
+
+                    if (!cardSuccess)
+                    {
+                        SendLog($"[카드 사용 실패] {cardErrorMsg}");
+                    }
                     CancelSelection(); // 카드를 썼으니 다시 빈손
                     break;
             }

@@ -34,7 +34,7 @@ namespace CardChess.Cards
         {
             state.ReplacePiece(targetPos, EvolutionTarget);
 
-            Console.WriteLine($"{Name} 발동! {targetPos}의 폰이 {EvolutionTarget}(으)로 진화했습니다.");
+            MainForm.Instance.AddLog($"{Name} 발동! {targetPos}의 폰이 {EvolutionTarget}(으)로 진화했습니다.");
         }
     }
 }

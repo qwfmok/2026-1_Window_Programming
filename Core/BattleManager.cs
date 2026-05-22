@@ -22,7 +22,8 @@ namespace CardChess
         private GameManager gameManager;
         private BattlePhase currentPhase = BattlePhase.Phase0_TurnCheck;
 
-        public bool IsExtraTurnGranted { get; set; } = false;
+        // [수정] BattleManager 자체의 턴 추가 변수는 혼동을 주므로 삭제
+        // public bool IsExtraTurnGranted { get; set; } = false;
         public bool IsPlayable => currentPhase == BattlePhase.Phase2_Play;
 
         public event Action<PlayerType> OnTurnChanged;
@@ -56,9 +57,9 @@ namespace CardChess
                 case BattlePhase.Phase3_End: // 엔드 페이즈 -> 상태이상, 잔존효과 처리
                     gameManager.CleanUpTurnEffects();
 
-                    if (IsExtraTurnGranted) // 추가 턴 카드 쓰면 작동하는 조건식
+                    if (gameManager.State.IsExtraTurnGranted) // 추가 턴 카드 쓰면 작동하는 조건식
                     {
-                        IsExtraTurnGranted = false;
+                        gameManager.State.IsExtraTurnGranted = false;
                         OnTurnChanged?.Invoke(gameManager.State.CurrentTurn);
                     }
                     else

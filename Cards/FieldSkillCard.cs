@@ -44,7 +44,7 @@ namespace CardChess.Cards
                 if (!state.ActiveWalls.ContainsKey(wallKey))
                 {
                     state.ActiveWalls.Add(wallKey, Duration);
-                    Console.WriteLine($"[지형 생성] {targetPos.Row},{targetPos.Col} 칸에 벽 상태가 부여되었습니다. ({Duration}턴 유지)");
+                    MainForm.Instance.AddLog($"[지형 생성] {targetPos.Row},{targetPos.Col} 칸에 벽 상태가 부여되었습니다. ({Duration}턴 유지)");
                 }
             }
             else if (Name == "폰 소환")
@@ -53,7 +53,7 @@ namespace CardChess.Cards
                 Pawn newPawn = new Pawn(currentPlayer, targetPos);
                 state.SetPieceAt(targetPos, newPawn);
 
-                Console.WriteLine($"[기물 소환] {targetPos.Row},{targetPos.Col} 칸에 {currentPlayer}의 폰이 소환되었습니다.");
+                MainForm.Instance.AddLog($"[기물 소환] {targetPos.Row},{targetPos.Col} 칸에 {currentPlayer}의 폰이 소환되었습니다.");
             }
         }
     }
