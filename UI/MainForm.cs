@@ -99,6 +99,7 @@ namespace CardChess
 
             // 보드 뷰 참조
             this.boardView = new BoardView(pnlBoard, gameManager);
+            this.boardView.MyPlayerType = assignedPlayerType; // 1p 2p 헷갈려서 넣음
             InitCanvasBoardEvents();
 
             // 프레임 연산 구동용 메인 루프 타이머 가동
@@ -215,12 +216,23 @@ namespace CardChess
 
         private void RefreshHand()
         {
-            pnlPlayerHand.Controls.Clear();
-            int cardWidth = 80, cardHeight = 120, spacing = 10, startX = 10, startY = 10;
+            // 카드 컨트롤들 안전하게 지우기 (패널 자체는 삭제 안 되도록)
+            for (int i = pnlPlayerHand.Controls.Count - 1; i >= 0; i--)
+                if (pnlPlayerHand.Controls[i] != pnlPlayerDeck) pnlPlayerHand.Controls.RemoveAt(i);
 
-            for (int i = 0; i < gameManager.State.Hands[PlayerType.Player1].Count; i++)
+            for (int i = pnlOpponentHand.Controls.Count - 1; i >= 0; i--)
+                if (pnlOpponentHand.Controls[i] != pnlOpponentDeck) pnlOpponentHand.Controls.RemoveAt(i);
+
+            pnlPlayArea.Controls.Clear(); // 공용 덱이 올라갈 영역 초기화
+
+            int cardWidth = 80, cardHeight = 120, spacing = 10, startX = 10, startY = 10;
+            PlayerType myType = inputController.MyPlayerType;
+            PlayerType oppType = (myType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
+
+            // 내 손패 그리기
+            for (int i = 0; i < gameManager.State.Hands[myType].Count; i++)
             {
-                ICard card = gameManager.State.Hands[PlayerType.Player1][i];
+                ICard card = gameManager.State.Hands[myType][i];
                 Button btnCard = new Button
                 {
                     Width = cardWidth,
@@ -236,6 +248,38 @@ namespace CardChess
                 btnCard.MouseDown += CardButton_MouseDown;
                 pnlPlayerHand.Controls.Add(btnCard);
             }
+
+            //상대방 손패 그리기 (카드 뒷면 처리)
+            for (int i = 0; i < gameManager.State.Hands[oppType].Count; i++)
+            {
+                Button btnOppCard = new Button
+                {
+                    Width = cardWidth,
+                    Height = cardHeight,
+                    Left = startX + (cardWidth + spacing) * i,
+                    Top = startY,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.SlateGray,
+                    Enabled = false
+                };
+                pnlOpponentHand.Controls.Add(btnOppCard);
+            }
+
+            // '공용 덱'을 pnlPlayArea에 그리기!
+            Button btnSharedDeck = new Button
+            {
+                Width = pnlPlayArea.Width - 10,
+                Height = pnlPlayArea.Height - 10,
+                Left = 5,
+                Top = 5,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.SaddleBrown,
+                ForeColor = Color.White,
+                Font = new Font("맑은 고딕", 12, FontStyle.Bold),
+                Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
+                Enabled = false
+            };
+            pnlPlayArea.Controls.Add(btnSharedDeck);
         }
 
         private void CardButton_MouseDown(object sender, MouseEventArgs e)

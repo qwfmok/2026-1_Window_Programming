@@ -101,14 +101,14 @@ namespace CardChess.Cards
                 Random rand = new Random();
 
                 // 덱에 카드가 최소 2장 이상 있는지 확인
-                if (state.Decks.ContainsKey(myPlayer) && state.Decks[myPlayer].Count >= 2)
+                if (state.SharedDeck.Count >= 2)
                 {
                     MainForm.Instance.AddLog($"[랜덤 실행] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
 
                     for (int i = 0; i < 2; i++)
                     {
                         // 손패(Hands)로 옮기지 않고, 덱에서 바로 카드를 꺼냅니다.
-                        ICard randomCard = state.Decks[myPlayer].Pop();
+                        ICard randomCard = state.SharedDeck.Pop();
 
                         // 이 카드가 타겟이 필요한 카드일 경우를 대비해 무작위 좌표를 하나 생성합니다.
                         // (체스판이 8x8이므로 0~7 사이의 무작위 row, col)
