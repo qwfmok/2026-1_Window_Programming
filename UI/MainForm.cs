@@ -536,6 +536,7 @@ namespace CardChess
             this.Controls.Add(this.logbox);
             this.Controls.Add(this.pnlOpponentHand);
             this.Name = "MainForm";
+            this.Text = "Card Chess Game";
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.pnlPlayerHand.ResumeLayout(false);
             this.pnlOpponentHand.ResumeLayout(false);
