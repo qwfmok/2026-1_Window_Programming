@@ -52,29 +52,50 @@ namespace CardChess.Core
 
         public bool IsAllyPiece(Position pos, PlayerType player) => State.IsAllyPiece(pos, player); // 동맹 기물 판단
 
-        public void TryMoveOrAttack(Position from, Position to)
+        public bool TryMoveOrAttack(Position from, Position to,out string errorMessage)
         {
-            if (State.IsGameOver) return;
+            errorMessage = ""; // 💡 반드시 맨 처음에 초기화해줘야 합니다!
+
+            if (State.IsGameOver)
+            {
+                errorMessage = "이미 게임이 종료되었습니다.";
+                return false;
+            }
 
             IPiece piece = State.GetPieceAt(from);
-            if (piece == null) return;
+            if (piece == null)
+            {
+                errorMessage = "선택한 칸에 기물이 없습니다.";
+                return false;
+            }
 
             if (piece.CanMove(to, State) || piece.CanAttack(to, State))
             {
                 IPiece targetPiece = State.GetPieceAt(to);
-                if (targetPiece != null && targetPiece.Owner == piece.Owner) return;
+
+                if (targetPiece != null && targetPiece.Owner == piece.Owner)
+                {
+                    errorMessage = "아군 기물이 있는 곳으로는 이동할 수 없습니다.";
+                    return false;
+                }
 
                 if (targetPiece != null && targetPiece.Owner != piece.Owner)
                 {
-                    if (targetPiece.IsFrozen) return;
+                    if (targetPiece.IsFrozen)
+                    {
+                        errorMessage = "대상은 존야 상태이므로 공격할 수 없습니다!";
+                        return false;
+                    }
 
                     if (targetPiece.HasShield)
                     {
                         targetPiece.HasShield = false;
+                        errorMessage = "대상의 신성한 보호막이 공격을 1회 방어했습니다!";
+
                         if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
 
                         OnTurnEndRequired?.Invoke();
-                        return;
+                        return true; // 💡 행동은 했으니 true 반환
                     }
 
                     if (targetPiece.Type == PieceType.King)
@@ -84,8 +105,10 @@ namespace CardChess.Core
                         piece.CurrentPosition = to;
                         State.IsGameOver = true;
                         State.Winner = piece.Owner;
+                        errorMessage = $"{piece.Owner}가 상대 킹을 잡았습니다. 게임 종료!";
+
                         if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
-                        return;
+                        return true;
                     }
 
                     if (targetPiece.Owner == PlayerType.Player1) State.Player1DeadPieces.Add(targetPiece.Type);
@@ -98,6 +121,12 @@ namespace CardChess.Core
 
                 if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
                 OnTurnEndRequired?.Invoke();
+                return true; // 💡 이동/공격 완료 시 true 반환
+            }
+            else
+            {
+                errorMessage = $"[{piece.Type}] 해당 위치({to.Row},{to.Col})로는 이동하거나 공격할 수 없습니다!";
+                return false;
             }
         }
 
@@ -109,11 +138,39 @@ namespace CardChess.Core
             OnTurnEndRequired?.Invoke();
         }
 
-        public void TryUseCard(ICard card, Position targetPos)
+        public bool TryUseCard(ICard card, Position targetPos, out string errorMessage)
         {
-            if (State.IsGameOver || card == null) return;
-            CardMgr.UseCard(card, targetPos, State.CurrentTurn);
-            if (IsLocalAction) OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}");
+            errorMessage = "";
+
+            if (State.IsGameOver)
+            {
+                errorMessage = "이미 게임이 종료되었습니다.";
+                return false;
+            }
+
+            if (card == null)
+            {
+                errorMessage = "선택된 카드가 없습니다.";
+                return false;
+            }
+
+            if (card.CanUse(targetPos, State))
+            {
+                CardMgr.UseCard(card, targetPos, State.CurrentTurn);
+
+                // 💡 [추가됨] 로컬에서 내가 직접 쓴 카드라면 상대방에게 네트워크로 알림!
+                if (IsLocalAction)
+                {
+                    OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}");
+                }
+
+                return true;
+            }
+            else
+            {
+                errorMessage = $"[{card.Name}] 카드를 해당 위치에 사용할 수 없거나 조건이 맞지 않습니다.";
+                return false;
+            }
         }
 
         /// <summary>

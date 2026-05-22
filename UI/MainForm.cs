@@ -25,7 +25,6 @@ namespace CardChess
         private Panel pnlPlayerHand;
         private Panel pnlPlayerDeck;
         private Panel pnlBoard; // 중앙 패널보드 여기에 보드들어감 수정하다가 이거없어져서 ㅈ될뻔
-        private Panel pnlDrawArea;
         private Panel pnlPlayArea;
         private ListBox logbox;
         private Panel pnlOpponentDeck;
@@ -47,6 +46,9 @@ namespace CardChess
         // --- 현재 플레이어 상태 나타내는 용도 ---
         private Image playerStateImg;
 
+        // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
+        public static MainForm Instance;
+
         // 진입점
 
         public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType)
@@ -56,6 +58,10 @@ namespace CardChess
             this.Width = 1600;
             this.Height = 900; // MainForm(이하 메인폼)의 최초 크기 정의
             this.pnlBoard.Size = new Size(720, 720); // 패널보드의 최초 크기 정의
+
+            // 폼이 생성될 때 자기 자신을 Instance 변수에 등록
+            Instance = this;
+            gameManager = new GameManager();
 
             // 메인폼 배경 이미지 설정 경로는 동일하게 바이너리/디버그의 에셋 폴더
             string bgPath = Path.Combine(Application.StartupPath, "Assets", "bg.png");
@@ -279,17 +285,47 @@ namespace CardChess
             if (ghostCard != null)
             {
                 ghostCard.Capture = false;
-                Point clientPt = pnlBoard.PointToClient(Cursor.Position);
+                // 현재 마우스가 폼 전체에서 어디에 있는지 좌표 확인
+                Point formPt = this.PointToClient(Cursor.Position);
 
-                if (boardView.TryConvertPixelToPosition(clientPt.X, clientPt.Y, out Position targetPos))
+                // 현재 마우스가 체스판(pnlBoard) 안에서 어디에 있는지 좌표 확인
+                Point boardPt = pnlBoard.PointToClient(Cursor.Position);
+
+                // [핵심 추가] 카드를 드롭한 위치가 '손패(pnlPlayerHand) 영역' 안쪽인가?
+                bool isDroppedInHand = pnlPlayerHand.Bounds.Contains(formPt);
+
+                if (isDroppedInHand)
                 {
+                    // 손패에 다시 내려놓았으므로 '사용 취소' 처리!
+                    inputController.CancelSelection();
+                    AddLog("카드 사용을 취소했습니다.");
+                }
+                else if (boardView.TryConvertPixelToPosition(boardPt.X, boardPt.Y, out Position targetPos))
+                {
+                    // 체스판 위에 내려놓았을 때 (기존 타겟팅 로직)
                     inputController.OnBoardClicked(targetPos);
                     boardView.HandleMovementAnimation();
                     ShowGameEndMessageIfNeeded();
+                    RefreshHand();
                 }
                 else
                 {
-                    inputController.CancelSelection();
+                    // 체스판 밖 & 손패 밖 (진짜 허공)에 던졌을 때 -> 즉시 발동!
+                    ICard selectedCard = inputController.SelectedCard;
+
+                    if (selectedCard != null &&
+                       (selectedCard.Type == CardType.ActiveSkill || selectedCard.Type == CardType.Trap))
+                    {
+                        string errorMsg;
+                        bool success = gameManager.TryUseCard(selectedCard, new Position(0, 0), out errorMsg);
+
+                        if (!success)
+                            AddLog($"[실패] {errorMsg}");
+                        else
+                            RefreshHand(); // 발동 성공 시 UI 갱신
+                    }
+
+                    inputController.CancelSelection(); // 발동 시도 후엔 무조건 빈손으로
                 }
 
                 this.Controls.Remove(ghostCard);
@@ -329,7 +365,7 @@ namespace CardChess
                 Position to = new Position(int.Parse(p[3]), int.Parse(p[4]));
 
                 gameManager.IsLocalAction = false;
-                gameManager.TryMoveOrAttack(from, to);
+                gameManager.TryMoveOrAttack(from, to, out _);
                 gameManager.IsLocalAction = true;
             }
             else if (msg.StartsWith("CARD"))
@@ -342,7 +378,7 @@ namespace CardChess
                 if (cardToUse != null)
                 {
                     gameManager.IsLocalAction = false;
-                    gameManager.TryUseCard(cardToUse, target);
+                    gameManager.TryUseCard(cardToUse, target, out _);
                     gameManager.IsLocalAction = true;
                 }
                 RefreshBoard();
@@ -372,7 +408,7 @@ namespace CardChess
             MessageBox.Show(message, "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void AddLog(string message)
+        public void AddLog(string message)
         {
             logbox.Items.Add(message);
             if (logbox.Items.Count > 0) logbox.TopIndex = logbox.Items.Count - 1;
@@ -389,87 +425,88 @@ namespace CardChess
             this.pnlPlayerHand = new System.Windows.Forms.Panel();
             this.pnlPlayerDeck = new System.Windows.Forms.Panel();
             this.pnlBoard = new System.Windows.Forms.Panel();
-            this.pnlDrawArea = new System.Windows.Forms.Panel();
             this.pnlPlayArea = new System.Windows.Forms.Panel();
             this.logbox = new System.Windows.Forms.ListBox();
             this.pnlOpponentDeck = new System.Windows.Forms.Panel();
             this.pnlOpponentHand = new System.Windows.Forms.Panel();
             this.lblNetworkStatus = new System.Windows.Forms.Label();
             this.btnPassTurn = new System.Windows.Forms.Button();
-
             this.pnlPlayerHand.SuspendLayout();
             this.pnlOpponentHand.SuspendLayout();
             this.SuspendLayout();
-
+            // 
             // pnlPlayerHand
+            // 
             this.pnlPlayerHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlPlayerHand.Controls.Add(this.pnlPlayerDeck);
             this.pnlPlayerHand.Location = new System.Drawing.Point(829, 468);
             this.pnlPlayerHand.Name = "pnlPlayerHand";
             this.pnlPlayerHand.Size = new System.Drawing.Size(590, 280);
             this.pnlPlayerHand.TabIndex = 13;
-
-            // lblNetworkStatus
-            this.lblNetworkStatus.AutoSize = true;
-            this.lblNetworkStatus.Font = new System.Drawing.Font("맑은 고딕", 11F, System.Drawing.FontStyle.Bold);
-            this.lblNetworkStatus.ForeColor = System.Drawing.Color.White;
-            this.lblNetworkStatus.BackColor = System.Drawing.Color.Transparent;
-            this.lblNetworkStatus.Location = new System.Drawing.Point(829, 230);
-            this.lblNetworkStatus.Name = "lblNetworkStatus";
-            this.lblNetworkStatus.Size = new System.Drawing.Size(150, 20);
-            this.lblNetworkStatus.Text = "네트워크: 오프라인";
-
+            // 
             // pnlPlayerDeck
+            // 
             this.pnlPlayerDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlPlayerDeck.Location = new System.Drawing.Point(465, 95);
             this.pnlPlayerDeck.Name = "pnlPlayerDeck";
             this.pnlPlayerDeck.Size = new System.Drawing.Size(120, 180);
             this.pnlPlayerDeck.TabIndex = 7;
-
+            // 
             // pnlBoard
+            // 
             this.pnlBoard.Location = new System.Drawing.Point(79, 58);
             this.pnlBoard.Name = "pnlBoard";
             this.pnlBoard.Size = new System.Drawing.Size(720, 720);
             this.pnlBoard.TabIndex = 10;
-
-            // pnlDrawArea
-            this.pnlDrawArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlDrawArea.Location = new System.Drawing.Point(1169, 268);
-            this.pnlDrawArea.Name = "pnlDrawArea";
-            this.pnlDrawArea.Size = new System.Drawing.Size(120, 180);
-            this.pnlDrawArea.TabIndex = 14;
-
+            // 
             // pnlPlayArea
+            // 
             this.pnlPlayArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlPlayArea.Location = new System.Drawing.Point(1295, 268);
             this.pnlPlayArea.Name = "pnlPlayArea";
             this.pnlPlayArea.Size = new System.Drawing.Size(120, 180);
             this.pnlPlayArea.TabIndex = 15;
-
+            // 
             // logbox
+            // 
             this.logbox.FormattingEnabled = true;
-            this.logbox.ItemHeight = 12;
+            this.logbox.ItemHeight = 18;
             this.logbox.Location = new System.Drawing.Point(829, 268);
             this.logbox.Name = "logbox";
-            this.logbox.Size = new System.Drawing.Size(334, 184);
+            this.logbox.Size = new System.Drawing.Size(460, 184);
             this.logbox.TabIndex = 11;
-
+            // 
             // pnlOpponentDeck
+            // 
             this.pnlOpponentDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlOpponentDeck.Location = new System.Drawing.Point(465, 3);
             this.pnlOpponentDeck.Name = "pnlOpponentDeck";
             this.pnlOpponentDeck.Size = new System.Drawing.Size(120, 180);
             this.pnlOpponentDeck.TabIndex = 6;
-
+            // 
             // pnlOpponentHand
+            // 
             this.pnlOpponentHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlOpponentHand.Controls.Add(this.pnlOpponentDeck);
             this.pnlOpponentHand.Location = new System.Drawing.Point(829, 58);
             this.pnlOpponentHand.Name = "pnlOpponentHand";
             this.pnlOpponentHand.Size = new System.Drawing.Size(590, 190);
             this.pnlOpponentHand.TabIndex = 12;
-
+            // 
+            // lblNetworkStatus
+            // 
+            this.lblNetworkStatus.AutoSize = true;
+            this.lblNetworkStatus.BackColor = System.Drawing.Color.Transparent;
+            this.lblNetworkStatus.Font = new System.Drawing.Font("맑은 고딕", 11F, System.Drawing.FontStyle.Bold);
+            this.lblNetworkStatus.ForeColor = System.Drawing.Color.White;
+            this.lblNetworkStatus.Location = new System.Drawing.Point(829, 230);
+            this.lblNetworkStatus.Name = "lblNetworkStatus";
+            this.lblNetworkStatus.Size = new System.Drawing.Size(150, 20);
+            this.lblNetworkStatus.TabIndex = 0;
+            this.lblNetworkStatus.Text = "네트워크: 오프라인";
+            // 
             // btnPassTurn
+            // 
             this.btnPassTurn.Location = new System.Drawing.Point(1169, 468);
             this.btnPassTurn.Name = "btnPassTurn";
             this.btnPassTurn.Size = new System.Drawing.Size(246, 40);
@@ -477,21 +514,28 @@ namespace CardChess
             this.btnPassTurn.Text = "턴 넘기기";
             this.btnPassTurn.UseVisualStyleBackColor = true;
             this.btnPassTurn.Click += new System.EventHandler(this.BtnPassTurn_Click);
-
+            // 
             // MainForm
+            // 
             this.ClientSize = new System.Drawing.Size(1584, 861);
             this.Controls.Add(this.btnPassTurn);
             this.Controls.Add(this.pnlPlayerHand);
             this.Controls.Add(this.pnlBoard);
-            this.Controls.Add(this.pnlDrawArea);
             this.Controls.Add(this.pnlPlayArea);
             this.Controls.Add(this.logbox);
             this.Controls.Add(this.pnlOpponentHand);
             this.Name = "MainForm";
+            this.Text = "Card Chess Game";
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.pnlPlayerHand.ResumeLayout(false);
             this.pnlOpponentHand.ResumeLayout(false);
             this.ResumeLayout(false);
-            this.PerformLayout();
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

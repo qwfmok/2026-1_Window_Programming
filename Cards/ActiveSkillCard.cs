@@ -29,28 +29,23 @@ namespace CardChess.Cards
             if (Name == "욕망의 항아리")
             {
                 cardManager.DrawMultiple(state.CurrentTurn, 2);
+                MainForm.Instance.AddLog($"[욕망의 항아리] {state.CurrentTurn}가 카드를 2장 뽑습니다.");
             }
             else if (Name == "패 털이")
             {
-                // 양쪽 플레이어 모두에게 적용
-                foreach (PlayerType player in Enum.GetValues(typeof(PlayerType)))
+                PlayerType myPlayer = state.CurrentTurn;
+
+                // 내 손패 처리 (방금 낸 '패 털이' 카드 1장을 뺀 나머지 개수만큼 뽑음)
+                if (state.Hands.ContainsKey(myPlayer))
                 {
-                    // 딕셔너리에 해당 플레이어의 손패가 제대로 있는지 안전장치
-                    if (state.Hands.ContainsKey(player))
+                    int myDrawCount = state.Hands[myPlayer].Count - 1;
+                    state.Hands[myPlayer].Clear(); // 내 손패 싹 비우기
+                    if (myDrawCount > 0)
                     {
-                        // 버리기 전, 현재 손패가 몇 장인지 기억해둔다.
-                        int discardedCount = state.Hands[player].Count - 1;
-
-                        if (discardedCount > 0)
-                        {
-                            // 손패를 싹 비운다 (버리기)
-                            state.Hands[player].Clear();
-
-                            // 버린 개수만큼 새로 뽑는다
-                            cardManager.DrawMultiple(player, discardedCount);
-                        }
+                        cardManager.DrawMultiple(myPlayer, myDrawCount);
                     }
                 }
+                MainForm.Instance.AddLog($"[패 털이] 발동! {state.CurrentTurn}가 손패를 모두 버리고 새로 뽑았습니다.");
             }
             else if (Name == "카드 뺏기")
             {
@@ -79,16 +74,16 @@ namespace CardChess.Cards
                         // 내 손패에 추가
                         state.Hands[myPlayer].Add(stolenCard);
 
-                        Console.WriteLine($"{myPlayer}가 {enemyPlayer}의 패에서 [{stolenCard.Name}] 카드를 탈취했습니다!");
+                        MainForm.Instance.AddLog($"{myPlayer}가 {enemyPlayer}의 패에서 [{stolenCard.Name}] 카드를 탈취했습니다!");
                     }
                     else
                     {
-                        Console.WriteLine("내 손패가 가득 차서 카드를 뺏어올 수 없습니다!");
+                        MainForm.Instance.AddLog("내 손패가 가득 차서 카드를 뺏어올 수 없습니다!");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("상대방의 손패가 비어있어 카드를 뺏을 수 없습니다.");
+                    MainForm.Instance.AddLog("상대방의 손패가 비어있어 카드를 뺏을 수 없습니다.");
                 }
             }
             else if (Name == "턴 추가")
@@ -98,17 +93,17 @@ namespace CardChess.Cards
                 // GameState에 한 번 더 행동할 수 있는 권한을 부여합니다.
                 state.IsExtraTurnGranted = true;
 
-                Console.WriteLine($"{myPlayer}가 [턴 추가] 카드를 발동! 다음 상대방의 턴이 스킵됩니다.");
+               MainForm.Instance.AddLog($"{myPlayer}가 [턴 추가] 카드를 발동! 다음 상대방의 턴이 스킵됩니다.");
             }
             else if (Name == "랜덤 실행")
             {
                 PlayerType myPlayer = state.CurrentTurn;
                 Random rand = new Random();
 
-                // 💡 덱에 카드가 최소 2장 이상 있는지 확인
+                // 덱에 카드가 최소 2장 이상 있는지 확인
                 if (state.Decks.ContainsKey(myPlayer) && state.Decks[myPlayer].Count >= 2)
                 {
-                    Console.WriteLine($"[랜덤 실행] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
+                    MainForm.Instance.AddLog($"[랜덤 실행] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
 
                     for (int i = 0; i < 2; i++)
                     {
@@ -143,13 +138,13 @@ namespace CardChess.Cards
                         }
 
                         // 카드 자체의 Execute를 즉시 실행! (CardManager는 인자로 받은 것 그대로 배달)
-                        Console.WriteLine($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
+                        MainForm.Instance.AddLog($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
                         randomCard.Execute(randomPos, state, cardManager);
                     }
                 }
                 else
                 {
-                    Console.WriteLine("덱에 카드가 부족하여 [랜덤 실행]을 사용할 수 없습니다.");
+                    MainForm.Instance.AddLog("덱에 카드가 부족하여 [랜덤 실행]을 사용할 수 없습니다.");
                 }
             }
         }

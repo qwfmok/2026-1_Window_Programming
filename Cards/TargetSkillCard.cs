@@ -79,7 +79,7 @@ namespace CardChess.Cards
 
             if (Name != "부활" && targetPiece == null)
             {
-                Console.WriteLine($"[{Name}] 타겟 기물이 존재하지 않아 스킬이 허공에 빗나갔습니다!");
+                MainForm.Instance.AddLog($"[{Name}] 타겟 기물이 존재하지 않아 스킬이 허공에 빗나갔습니다!");
                 return;
             }
 
@@ -87,24 +87,24 @@ namespace CardChess.Cards
             {
                 case "신성한 보호막":
                     targetPiece.HasShield = true;
-                    Console.WriteLine($"[{Name}] {targetPos.Row},{targetPos.Col} 기물에 공격 1회 방어 보호막이 씌워졌습니다.");
+                    MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물에 공격 1회 방어 보호막이 씌워졌습니다.");
                     break;
 
                 case "존야":
                     targetPiece.IsFrozen = true;
-                    Console.WriteLine($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 무적 및 행동 불가 상태가 되었습니다.");
+                    MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 무적 및 행동 불가 상태가 되었습니다.");
                     break;
 
                 case "컨트롤 탈취":
                     targetPiece.Owner = myPlayer;
-                    Console.WriteLine($"[{Name}] 상대 기물의 소유권을 내 것으로 만들었습니다!");
+                    MainForm.Instance.AddLog($"[{Name}] 상대 기물의 소유권을 내 것으로 만들었습니다!");
                     break;
 
                 case "영혼 해방":
                     // 현재 위치를 그림자(원래 위치)로 기억하고, 지속 턴을 2턴으로 설정
                     targetPiece.ShadowPosition = new Position(targetPos.Row, targetPos.Col);
                     targetPiece.ShadowTurns = 2;
-                    Console.WriteLine($"[{Name}] 요네 E 발동! 2턴 후 {targetPos.Row},{targetPos.Col}로 다시 돌아옵니다.");
+                    MainForm.Instance.AddLog($"[{Name}] 영혼 해방 발동! 2턴 후 {targetPos.Row},{targetPos.Col}로 다시 돌아옵니다.");
                     break;
 
                 case "기물 위치교환":
@@ -121,7 +121,7 @@ namespace CardChess.Cards
                         state.SetPieceAt(pos2, targetPiece);
                         swapTarget.CurrentPosition = pos1;
                         targetPiece.CurrentPosition = pos2;
-                        Console.WriteLine($"[{Name}] 두 기물의 위치가 교환되었습니다.");
+                        MainForm.Instance.AddLog($"[{Name}] 두 기물의 위치가 교환되었습니다.");
                     }
                     break;
 
@@ -133,7 +133,7 @@ namespace CardChess.Cards
                         Position clonePos = emptyAdj[rand.Next(emptyAdj.Count)];
                         IPiece clonedPiece = CreatePiece(targetPiece.Type, myPlayer, clonePos);
                         state.SetPieceAt(clonePos, clonedPiece);
-                        Console.WriteLine($"[{Name}] 기물이 {clonePos.Row},{clonePos.Col} 칸에 복제되었습니다.");
+                        MainForm.Instance.AddLog($"[{Name}] 기물이 {clonePos.Row},{clonePos.Col} 칸에 복제되었습니다.");
                     }
                     break;
 
@@ -144,7 +144,7 @@ namespace CardChess.Cards
 
                     IPiece pandoraPiece = CreatePiece(newType, targetPiece.Owner, targetPos);
                     state.SetPieceAt(targetPos, pandoraPiece);
-                    Console.WriteLine($"[{Name}] 판도라의 상자가 열려 {newType} 기물로 변이했습니다!");
+                    MainForm.Instance.AddLog($"[{Name}] 판도라의 상자가 열려 {newType} 기물로 변이했습니다!");
                     break;
 
                 case "부활":
@@ -164,7 +164,7 @@ namespace CardChess.Cards
                         // 실제 기물 생성 및 보드 배치
                         IPiece resPiece = CreatePiece(resurrectedType, myPlayer, targetPos);
                         state.SetPieceAt(targetPos, resPiece);
-                        Console.WriteLine($"[{Name}] 빈칸에 {resurrectedType} 기물이 성공적으로 부활했습니다!");
+                        MainForm.Instance.AddLog($"[{Name}] 빈칸에 {resurrectedType} 기물이 성공적으로 부활했습니다!");
                     }
                     break;
             }
