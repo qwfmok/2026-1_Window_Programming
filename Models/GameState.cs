@@ -12,7 +12,7 @@ namespace CardChess.Core
 
         // --- 🃏 카드 관련 데이터 수정 ---
         // CardManager가 사용하는 Decks(Stack)와 Hands(List) 추가
-        public Dictionary<PlayerType, Stack<ICard>> Decks { get; private set; }
+        public Stack<ICard> SharedDeck { get; private set; }
         public Dictionary<PlayerType, List<ICard>> Hands { get; private set; }
         public Dictionary<PlayerType, List<ICard>> Traps { get; private set; }
         public Dictionary<string, int> ActiveWalls { get; private set; } = new Dictionary<string, int>();
@@ -25,12 +25,10 @@ namespace CardChess.Core
         {
             Board = new IPiece[8, 8];
             // 덱과 손패, 함정 초기화
-            Decks = new Dictionary<PlayerType, Stack<ICard>>();
+            SharedDeck = new Stack<ICard>();
             Hands = new Dictionary<PlayerType, List<ICard>>();
             Traps = new Dictionary<PlayerType, List<ICard>>();
-            // 플레이어별 공간 할당 (Player1, Player2 전용)
-            Decks[PlayerType.Player1] = new Stack<ICard>();
-            Decks[PlayerType.Player2] = new Stack<ICard>();
+            // 플레이어별 공간 할당 (Player1, Player2 전용)  
             Hands[PlayerType.Player1] = new List<ICard>();
             Hands[PlayerType.Player2] = new List<ICard>();
             Traps[PlayerType.Player1] = new List<ICard>();

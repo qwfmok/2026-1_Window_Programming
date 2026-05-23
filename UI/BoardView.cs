@@ -27,7 +27,26 @@ namespace CardChess.View
         private Dictionary<IPiece, PieceAnime> pieceAnimations = new Dictionary<IPiece, PieceAnime>();
 
         public Dictionary<IPiece, PieceAnime> PieceAnimations => pieceAnimations;
+        // =======================================================
+        // 하이라이트(불빛)용 변수들
+        // =======================================================
+        public List<Position> MoveHighlights { get; set; } = new List<Position>();
+        public List<Position> AttackHighlights { get; set; } = new List<Position>();
+        public Position? HoveredCell { get; set; } = null; // 현재 마우스가 올라간 칸
+        // =======================================================
 
+        // =======================================================
+        //  시점(Player1/Player2) 반전용 변수와 함수
+        // =======================================================
+        public PlayerType MyPlayerType { get; set; } = PlayerType.Player1;
+
+        // 논리 좌표(Row, Col)를 화면 좌표(Visual Row, Col)로 변환 (2P면 180도 회전)
+        private int GetVisualRow(int logicalRow) => MyPlayerType == PlayerType.Player2 ? 7 - logicalRow : logicalRow;
+        private int GetVisualCol(int logicalCol) => MyPlayerType == PlayerType.Player2 ? 7 - logicalCol : logicalCol;
+        // 반대로 화면 좌표를 논리 좌표로 변환
+        private int GetLogicalRow(int visualRow) => MyPlayerType == PlayerType.Player2 ? 7 - visualRow : visualRow;
+        private int GetLogicalCol(int visualCol) => MyPlayerType == PlayerType.Player2 ? 7 - visualCol : visualCol;
+        // =======================================================
         public BoardView(Panel pnlBoard, GameManager gameManager)
         {
             this.pnlBoard = pnlBoard;
@@ -65,22 +84,24 @@ namespace CardChess.View
             CellHeight = gridHeight / BoardManager.MAX_ROW;
         }
 
-        // 얘는 마우스 좌표 인식하는 로직임
-
+        //마우스 클릭 시 거꾸로 계산하기
         public bool TryConvertPixelToPosition(int mouseX, int mouseY, out Position position)
         {
-            position = default; // 변수초기화
+            position = default;
             CalculateBoardDimensions();
+            int visualCol = (int)((mouseX - XOffset) / CellWidth);
+            int visualRow = (int)((mouseY - YOffset) / CellHeight);
 
-            int col = (int)((mouseX - XOffset) / CellWidth);
-            int row = (int)((mouseY - YOffset) / CellHeight);
+            // 시점이 뒤집혀있다면 논리 좌표도 거꾸로 계산
+            int logicalRow = GetLogicalRow(visualRow);
+            int logicalCol = GetLogicalCol(visualCol);
 
-            if (CardChess.Core.BoardManager.IsValidPosition(row, col))
+            if (CardChess.Core.BoardManager.IsValidPosition(logicalRow, logicalCol))
             {
-                position = new Position(row, col);
-                return true; // 마우스가 보드 내부에서 특정 칸을 클릭했을 때고
+                position = new Position(logicalRow, logicalCol);
+                return true;
             }
-            return false; // 이건 반대로 마우스가 보드판 바깥을 클릭함
+            return false;
         }
 
         public void DrawBoard(Graphics g)
@@ -162,7 +183,42 @@ namespace CardChess.View
                 // 벽 그리기 전체 로직이 터지더라도 그냥 넘어갑니다. (기물은 그려야 하니까)
             }
             // =========================================================================================
+            if (MoveHighlights != null && MoveHighlights.Count > 0)
+            {
+                using (SolidBrush moveBrush = new SolidBrush(Color.FromArgb(100, 144, 238, 144))) // 반투명 초록색
+                {
+                    foreach (var pos in MoveHighlights)
+                    {
+                        int vRow = GetVisualRow(pos.Row);
+                        int vCol = GetVisualCol(pos.Col);
+                        g.FillRectangle(moveBrush, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                    }
+                }
+            }
 
+            if (AttackHighlights != null && AttackHighlights.Count > 0)
+            {
+                using (SolidBrush attackBrush = new SolidBrush(Color.FromArgb(100, 255, 99, 71))) // 반투명 빨간색
+                {
+                    foreach (var pos in AttackHighlights)
+                    {
+                        int vRow = GetVisualRow(pos.Row);
+                        int vCol = GetVisualCol(pos.Col);
+                        g.FillRectangle(attackBrush, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                    }
+                }
+            }
+
+            // 마우스 올린 칸에 노란색 테두리 그리기
+            if (HoveredCell.HasValue)
+            {
+                using (Pen hoverPen = new Pen(Color.Gold, 3))
+                {
+                    int vRow = GetVisualRow(HoveredCell.Value.Row);
+                    int vCol = GetVisualCol(HoveredCell.Value.Col);
+                    g.DrawRectangle(hoverPen, XOffset + vCol * CellWidth, YOffset + vRow * CellHeight, CellWidth, CellHeight);
+                }
+            }
             // 기물 렌더링
             foreach (var anime in pieceAnimations.Values)
             {
@@ -180,6 +236,7 @@ namespace CardChess.View
             }
         }
 
+        //  가만히 서있는 기물 위치 뒤집기
         private void UpdatePiecePixelPositions()
         {
             CalculateBoardDimensions();
@@ -193,13 +250,16 @@ namespace CardChess.View
                         PieceAnime anime = pieceAnimations[piece];
                         if (anime.State == PieceStatement.Idle1 || anime.State == PieceStatement.Idle2 || anime.State == PieceStatement.Attacking)
                         {
-                            anime.X = XOffset + col * CellWidth + (CellWidth - anime.Size) / 2f;
-                            anime.Y = YOffset + row * CellHeight + (CellHeight - anime.Size) / 2f;
+                            int vRow = GetVisualRow(row);
+                            int vCol = GetVisualCol(col);
+                            anime.X = XOffset + vCol * CellWidth + (CellWidth - anime.Size) / 2f;
+                            anime.Y = YOffset + vRow * CellHeight + (CellHeight - anime.Size) / 2f;
                         }
                     }
                 }
             }
         }
+        // 기물 처음 생성할 때 위치 뒤집기
         public void SyncPiecesWithBackend()
         {
             CalculateBoardDimensions();
@@ -226,15 +286,17 @@ namespace CardChess.View
                     IPiece piece = gameManager.State.GetPieceAt(new Position(row, col));
                     if (piece != null && !pieceAnimations.ContainsKey(piece))
                     {
-                        float startX = XOffset + col * CellWidth + (CellWidth - 70f) / 2f;
-                        float startY = YOffset + row * CellHeight + (CellHeight - 70f) / 2f;
-
+                        int vRow = GetVisualRow(row);
+                        int vCol = GetVisualCol(col);
+                        float startX = XOffset + vCol * CellWidth + (CellWidth - 70f) / 2f;
+                        float startY = YOffset + vRow * CellHeight + (CellHeight - 70f) / 2f;
                         PieceAnime anime = new ConcretePieceAnime(piece.Owner.ToString(), piece.Type.ToString(), startX, startY);
                         pieceAnimations.Add(piece, anime);
                     }
                 }
             }
         }
+        // 기물이 날아갈 때 도착 좌표 뒤집기
         public void HandleMovementAnimation()
         {
             SyncPiecesWithBackend();
@@ -248,8 +310,10 @@ namespace CardChess.View
                     if (piece != null && pieceAnimations.ContainsKey(piece))
                     {
                         PieceAnime anime = pieceAnimations[piece];
-                        float targetX = XOffset + col * CellWidth + (CellWidth / 2f);
-                        float targetY = YOffset + row * CellHeight + (CellHeight / 2f);
+                        int vRow = GetVisualRow(row);
+                        int vCol = GetVisualCol(col);
+                        float targetX = XOffset + vCol * CellWidth + (CellWidth / 2f);
+                        float targetY = YOffset + vRow * CellHeight + (CellHeight / 2f);
 
                         if (Math.Abs(anime.X - (targetX - anime.Size / 2f)) > 5 || Math.Abs(anime.Y - (targetY - anime.Size / 2f)) > 5)
                         {

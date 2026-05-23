@@ -17,12 +17,12 @@ namespace CardChess.Core
         public bool IsLocalAction { get; set; } = true;
         public event Action<string> OnNetworkBroadcast;
 
-        public GameManager()
+        public GameManager(int seed)
         {
             State = new GameState();
             CardMgr = new CardManager(State);
             InitializeBoard();
-            CardMgr.InitializeDecks();
+            CardMgr.InitializeDecks(seed);
 
             CardMgr.DrawMultiple(PlayerType.Player1, 5);
             CardMgr.DrawMultiple(PlayerType.Player2, 5);
