@@ -47,6 +47,24 @@ namespace CardChess
         // --- 현재 플레이어 상태 나타내는 용도 ---
         private Image playerStateImg;
 
+        // --- 카드 텍스트 인식시키는 변수부 ---
+        private readonly Dictionary<string, string> cardImageMap = new Dictionary<string, string>
+        {
+            { "기사 서품", "card_1_knightevo" },
+            { "골렘 연성", "card_1_rookevo" },
+            { "사제 서품", "card_1_bishopevo" },
+            { "욕망의 항아리", "card_1_bottle" },
+            { "생각의 압수", "card_1_handdeath" },
+            { "완벽한 약탈", "card_1_thief" },
+            { "시간 왜곡", "card_1_timewalk" },
+            { "도둑들의 경매", "card_1_auction" },
+            { "방벽 건설", "card_1_wallconst" },
+            { "증원", "card_1_reinforce" },
+            { "갬블 게임", "card_1_gamble" }
+
+            // 이후 신규 카드를 추가할 때는 { "스킬 이름", "파일 이름(확장자 불필요)" }, 로 개행하면 됨 + 마지막 행은 ,를 붙이지 않는다
+        };
+
         // 매번 하드디스크에서 이미지를 부르지 않도록 한 번만 저장해두는 변수
         private Image imgCardBack;
 
@@ -342,9 +360,24 @@ namespace CardChess
                         FlatStyle = FlatStyle.Flat,
                         BackColor = Color.LightGoldenrodYellow,
                         Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+                        ForeColor = Color.White,
                         Text = card.Name,
                         Tag = card
                     };
+
+                    string fileName = card.Name; // 딕셔너리 변수부에서 선언된 한글 이름을 파일명으로 치환하여 대입
+                    if (cardImageMap.ContainsKey(card.Name))
+                    {
+                        fileName = cardImageMap[card.Name];
+                    }
+
+                    string cardImgPath = Path.Combine(Application.StartupPath, "Assets", $"{fileName}.png"); // 실제 파일명을 인식하여 이미지 출력
+                    if (File.Exists(cardImgPath))
+                    {
+                        btnCard.BackgroundImage = Image.FromFile(cardImgPath);
+                        btnCard.BackgroundImageLayout = ImageLayout.Stretch;
+                    }
+
                     btnCard.MouseDown += CardButton_MouseDown;
                     btnCard.MouseEnter += CardButton_MouseEnter;
                     btnCard.Click += CardButton_Click;
