@@ -37,7 +37,7 @@ namespace CardChess.Input
         // 로그를 발생시키는 내부 헬퍼 함수
         private void SendLog(string message)
         {   // 현재 시간 메세지로 
-            OnLogMessage?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {message}");
+            OnLogMessage?.Invoke(this, message);
         }
 
         //  보드의 특정 칸을 클릭했을 때 쓰는 함수
@@ -77,12 +77,16 @@ namespace CardChess.Input
                         SendLog($"{SelectedPosition.Value.Row}, {SelectedPosition.Value.Col} 에서 {clickedPos.Row}, {clickedPos.Col}(으)로 이동/공격 시도!");
                         string moveErrorMsg;
                         bool moveSuccess = gameManager.TryMoveOrAttack(SelectedPosition.Value, clickedPos, out moveErrorMsg);
-                        
-                        if (!moveSuccess)
+
+                        if (!string.IsNullOrEmpty(moveErrorMsg))
                         {
-                            SendLog($"[실패] {moveErrorMsg}");
+                            if (moveSuccess)
+                                SendLog(moveErrorMsg);
+                            else
+                                SendLog($"[실패] {moveErrorMsg}");
                         }
-                        CancelSelection(); // 다시 빈손
+
+                        CancelSelection();
                     }
                     break;
 
@@ -93,11 +97,15 @@ namespace CardChess.Input
                     string cardErrorMsg;
                     bool cardSuccess = gameManager.TryUseCard(SelectedCard, clickedPos, out cardErrorMsg);
 
-                    if (!cardSuccess)
+                    if (!string.IsNullOrEmpty(cardErrorMsg))
                     {
-                        SendLog($"[카드 사용 실패] {cardErrorMsg}");
+                        if (cardSuccess)
+                            SendLog(cardErrorMsg);
+                        else
+                            SendLog($"[카드 사용 실패] {cardErrorMsg}");
                     }
-                    CancelSelection(); // 카드를 썼으니 다시 빈손
+
+                    CancelSelection();
                     break;
             }
         }

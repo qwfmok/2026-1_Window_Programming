@@ -3,6 +3,7 @@ using CardChess.Models;
 using CardChess.Pieces;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 // 게임 관리 구현은 여기서
 
@@ -119,9 +120,25 @@ namespace CardChess.Core
                 State.SetPieceAt(to, piece);
                 piece.CurrentPosition = to;
 
-                if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
-                OnTurnEndRequired?.Invoke();
-                return true; // 💡 이동/공격 완료 시 true 반환
+                // 이동/공격 후 체크 또는 체크메이트 상태인지 확인
+                string checkMessage;
+                bool isCheckmate = CheckCheckmateAfterAction(piece.Owner, out checkMessage);
+
+                if (!string.IsNullOrEmpty(checkMessage))
+                {
+                    errorMessage = checkMessage;
+                }
+
+                if (IsLocalAction)
+                    OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+
+                // 체크메이트가 아닐 때만 턴 종료
+                if (!State.IsGameOver)
+                {
+                    OnTurnEndRequired?.Invoke();
+                }
+
+                return true;
             }
             else
             {
@@ -156,9 +173,18 @@ namespace CardChess.Core
 
             if (card.CanUse(targetPos, State))
             {
+                PlayerType currentPlayer = State.CurrentTurn;
+
                 CardMgr.UseCard(card, targetPos, State.CurrentTurn);
 
-                // 💡 [추가됨] 로컬에서 내가 직접 쓴 카드라면 상대방에게 네트워크로 알림!
+                string checkMessage;
+                CheckCheckmateAfterAction(currentPlayer, out checkMessage);
+
+                if (!string.IsNullOrEmpty(checkMessage))
+                {
+                    errorMessage = checkMessage;
+                }
+
                 if (IsLocalAction)
                 {
                     OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}");
@@ -229,6 +255,263 @@ namespace CardChess.Core
                 State.ActiveWalls[key]--;
                 if (State.ActiveWalls[key] <= 0) State.ActiveWalls.Remove(key);
             }
+        }
+
+        private Position? FindKing(PlayerType player)
+        {
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Position pos = new Position(row, col);
+                    IPiece piece = State.GetPieceAt(pos);
+
+                    if (piece != null && piece.Owner == player && piece.Type == PieceType.King)
+                    {
+                        return pos;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsSquareUnderAttack(Position targetPos, PlayerType attacker)
+        {
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Position from = new Position(row, col);
+                    IPiece piece = State.GetPieceAt(from);
+
+                    if (piece == null)
+                        continue;
+
+                    if (piece.Owner != attacker)
+                        continue;
+
+                    if (CanPieceAttackSquare(from, targetPos))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool CanPieceAttackSquare(Position from, Position targetPos)
+        {
+            IPiece piece = State.GetPieceAt(from);
+
+            if (piece == null)
+                return false;
+
+            int dr = targetPos.Row - from.Row;
+            int dc = targetPos.Col - from.Col;
+
+            switch (piece.Type)
+            {
+                case PieceType.Pawn:
+                    int pawnDir = piece.Owner == PlayerType.Player1 ? -1 : 1;
+
+                    return dr == pawnDir && Math.Abs(dc) == 1;
+
+                case PieceType.Knight:
+                    return (Math.Abs(dr) == 2 && Math.Abs(dc) == 1) ||
+                           (Math.Abs(dr) == 1 && Math.Abs(dc) == 2);
+
+                case PieceType.Bishop:
+                    return Math.Abs(dr) == Math.Abs(dc) &&
+                           IsPathClear(from, targetPos);
+
+                case PieceType.Rook:
+                    return (dr == 0 || dc == 0) &&
+                           IsPathClear(from, targetPos);
+
+                case PieceType.Queen:
+                    return (dr == 0 || dc == 0 || Math.Abs(dr) == Math.Abs(dc)) &&
+                           IsPathClear(from, targetPos);
+
+                case PieceType.King:
+                    return Math.Abs(dr) <= 1 && Math.Abs(dc) <= 1;
+
+                default:
+                    return false;
+            }
+        }
+
+        public List<Position> GetCheckingPiecePositions()
+        {
+            List<Position> checkingPieces = new List<Position>();
+
+            CheckCheckingPiecesForKing(PlayerType.Player1, checkingPieces);
+            CheckCheckingPiecesForKing(PlayerType.Player2, checkingPieces);
+
+            return checkingPieces;
+        }
+
+        private void CheckCheckingPiecesForKing(PlayerType defender, List<Position> checkingPieces)
+        {
+            Position? kingPos = FindKing(defender);
+
+            if (!kingPos.HasValue)
+                return;
+
+            PlayerType attacker = defender == PlayerType.Player1
+                ? PlayerType.Player2
+                : PlayerType.Player1;
+
+            if (!IsInCheck(defender))
+                return;
+
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Position attackerPos = new Position(row, col);
+                    IPiece piece = State.GetPieceAt(attackerPos);
+
+                    if (piece == null)
+                        continue;
+
+                    if (piece.Owner != attacker)
+                        continue;
+
+                    if (CanPieceAttackSquare(attackerPos, kingPos.Value))
+                    {
+                        checkingPieces.Add(attackerPos);
+                    }
+                }
+            }
+        }
+
+        private bool IsPathClear(Position from, Position to)
+        {
+            int rowStep = Math.Sign(to.Row - from.Row);
+            int colStep = Math.Sign(to.Col - from.Col);
+
+            int row = from.Row + rowStep;
+            int col = from.Col + colStep;
+
+            while (row != to.Row || col != to.Col)
+            {
+                Position current = new Position(row, col);
+
+                if (State.GetPieceAt(current) != null)
+                    return false;
+
+                row += rowStep;
+                col += colStep;
+            }
+
+            return true;
+        }
+
+        private bool IsInCheck(PlayerType player)
+        {
+            Position? kingPos = FindKing(player);
+
+            if (!kingPos.HasValue)
+                return true;
+
+            PlayerType enemy = player == PlayerType.Player1 ? PlayerType.Player2 : PlayerType.Player1;
+
+            return IsSquareUnderAttack(kingPos.Value, enemy);
+        }
+
+        private bool HasAnyLegalMoveToEscapeCheck(PlayerType player)
+        {
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    Position from = new Position(row, col);
+                    IPiece piece = State.GetPieceAt(from);
+
+                    if (piece == null)
+                        continue;
+
+                    if (piece.Owner != player)
+                        continue;
+
+                    List<Position> candidates = new List<Position>();
+
+                    candidates.AddRange(piece.GetMovablePositions(State));
+                    candidates.AddRange(piece.GetAttackablePositions(State));
+
+                    foreach (Position to in candidates)
+                    {
+                        IPiece targetPiece = State.GetPieceAt(to);
+
+                        if (targetPiece != null && targetPiece.Owner == player)
+                            continue;
+
+                        Position originalPosition = piece.CurrentPosition;
+
+                        State.SetPieceAt(from, null);
+                        State.SetPieceAt(to, piece);
+                        piece.CurrentPosition = to;
+
+                        bool stillInCheck = IsInCheck(player);
+
+                        State.SetPieceAt(to, targetPiece);
+                        State.SetPieceAt(from, piece);
+                        piece.CurrentPosition = originalPosition;
+
+                        if (!stillInCheck)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool CheckCheckmateAfterAction(PlayerType attacker, out string message)
+        {
+            message = "";
+
+            PlayerType defender = attacker == PlayerType.Player1 ? PlayerType.Player2 : PlayerType.Player1;
+
+            bool defenderInCheck = IsInCheck(defender);
+
+            if (!defenderInCheck)
+                return false;
+
+            bool canEscape = HasAnyLegalMoveToEscapeCheck(defender);
+
+            if (!canEscape)
+            {
+                State.IsGameOver = true;
+                State.Winner = attacker;
+
+                message = $"체크메이트! {attacker} 승리!";
+                return true;
+            }
+
+            message = $"체크! {defender}의 킹이 공격받고 있습니다.";
+            return false;
+        }
+
+        public Position? GetCheckedKingPosition()
+        {
+            Position? player1King = FindKing(PlayerType.Player1);
+
+            if (player1King.HasValue && IsInCheck(PlayerType.Player1))
+            {
+                return player1King.Value;
+            }
+
+            Position? player2King = FindKing(PlayerType.Player2);
+
+            if (player2King.HasValue && IsInCheck(PlayerType.Player2))
+            {
+                return player2King.Value;
+            }
+
+            return null;
         }
     }
 }
