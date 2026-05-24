@@ -277,6 +277,13 @@ namespace CardChess
             // 상대 손패 그리기: 한 줄로 표시, 공간 안에서 잘리지 않게 표시
             int opponentCardCount = gameManager.State.Hands[oppType].Count;
 
+            string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
+            Image cardBackImg = null; // 카드 이미지 씌우는 변수 초기화 후 이미지 호출 1번만 해서 접근최소화
+            if (File.Exists(cardBackPath))
+            {
+                cardBackImg = Image.FromFile(cardBackPath);
+            }
+
             int opponentCardWidth = 70;
             int opponentCardHeight = 100;
             int opponentStartX = 10;
@@ -314,6 +321,16 @@ namespace CardChess
                     Text = "CARD",
                     Enabled = false
                 };
+                if (cardBackImg != null)
+                {
+                    btnOppCard.BackgroundImage = cardBackImg;
+                    btnOppCard.BackgroundImageLayout = ImageLayout.Stretch;
+                    btnOppCard.Text = "";
+                }
+                else
+                {
+                    btnOppCard.Text = "CARD"; // 텍스트 제거 및 예외 처리
+                }
 
                 pnlOpponentHand.Controls.Add(btnOppCard);
             }
@@ -331,9 +348,15 @@ namespace CardChess
                 BackColor = Color.SaddleBrown,
                 ForeColor = Color.White,
                 Font = new Font("맑은 고딕", 12, FontStyle.Bold),
-                Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
+                Text = $"덱\n{gameManager.State.SharedDeck.Count}장",
                 Enabled = false
             };
+
+            if (cardBackImg != null)
+            {
+                btnSharedDeck.BackgroundImage = cardBackImg;
+                btnSharedDeck.BackgroundImageLayout = ImageLayout.Stretch;
+            }
 
             pnlPlayArea.Controls.Add(btnSharedDeck);
         }
