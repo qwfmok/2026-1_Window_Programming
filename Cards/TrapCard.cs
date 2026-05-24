@@ -51,9 +51,8 @@ namespace CardChess.Cards
             {
                 MainForm.Instance.AddLog($"[함정 발동] '동전 던지기' 함정이 작동합니다!");
 
-                Random rand = new Random();
                 // 50% 확률 (0: 앞면/반사성공, 1: 뒷면/불발)
-                if (rand.Next(0, 2) == 0)
+                if (state.SharedRandom.Next(0, 2) == 0)
                 {
                     MainForm.Instance.AddLog(" -> 🪙 동전 앞면! 공격이 반사되어 공격 기물이 역으로 파괴됩니다!");
 

@@ -27,6 +27,7 @@ namespace CardChess
         public bool IsPlayable => currentPhase == BattlePhase.Phase2_Play;
 
         public event Action<PlayerType> OnTurnChanged;
+        public event Action<BattlePhase> OnPhaseChanged; // UI를 새로고침하라고 알려주는 알람
 
         public BattleManager(GameManager manager)
         {
@@ -48,6 +49,8 @@ namespace CardChess
                 case BattlePhase.Phase1_Draw: // 드로우 페이즈 -> 패에 카드 1장 들어오는 시점
                     gameManager.CardMgr.DrawCard(gameManager.State.CurrentTurn);
                     currentPhase = BattlePhase.Phase2_Play;
+                    OnPhaseChanged?.Invoke(currentPhase);
+
                     await ProcessNextPhase();
                     break;
 
