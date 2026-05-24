@@ -122,7 +122,7 @@ namespace CardChess.Models
                 // 대기 상태. 간단히 그냥 변수 증가로 idle1 이랑 2의 상태 교체하면서 idletime 0으로 만들어서 자체적으로 반복
 
                 case PieceStatement.Moving:
-                    Moveprogress += 0.04f;
+                    Moveprogress += 0.06f;
                     if (Moveprogress >= 1.0f)
                     {
                         Moveprogress = 1.0f;
@@ -143,7 +143,7 @@ namespace CardChess.Models
                     }
                     break;
                 // 이동 상태
-                // 이동 거리의 전체 진척도를 1로 보고, 0.04씩 증가시키면서 이동 처리 시작
+                // 이동 거리의 전체 진척도를 1로 보고, 0.06씩 증가시키면서 이동 처리 시작
                 // 예외인 else로 먼저 들어가서 1에서 Moveprogress 증가시킨 값의 ^3을 빼면서 거리 폴오프
                 // 이후 1.0 되면 if 들어가서 종료하고 Shaking 상태로 전환
                 // 초기값이 1이 되는 이유는 이동 종료 상태를 나타내기 위해서임

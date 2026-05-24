@@ -47,9 +47,9 @@ namespace CardChess.Cards
         /// 실제 함정이 발동될 때 실행될 내부 로직
         public bool OnTrigger(Position fromPos, Position toPos, GameState state)
         {
-            if (Name == "동전 던지기")
+            if (Name == "갬블 게임")
             {
-                MainForm.Instance.AddLog($"[함정 발동] '동전 던지기' 함정이 작동합니다!");
+                MainForm.Instance.AddLog($"[함정 발동] '갬블 게임' 함정이 작동합니다!");
 
                 Random rand = new Random();
                 // 50% 확률 (0: 앞면/반사성공, 1: 뒷면/불발)

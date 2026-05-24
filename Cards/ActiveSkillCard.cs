@@ -31,11 +31,11 @@ namespace CardChess.Cards
                 cardManager.DrawMultiple(state.CurrentTurn, 2);
                 MainForm.Instance.AddLog($"[욕망의 항아리] {state.CurrentTurn}가 카드를 2장 뽑습니다.");
             }
-            else if (Name == "패 털이")
+            else if (Name == "생각의 압수")
             {
                 PlayerType myPlayer = state.CurrentTurn;
 
-                // 내 손패 처리 (방금 낸 '패 털이' 카드 1장을 뺀 나머지 개수만큼 뽑음)
+                // 내 손패 처리 (방금 낸 '생각의 압수' 카드 1장을 뺀 나머지 개수만큼 뽑음)
                 if (state.Hands.ContainsKey(myPlayer))
                 {
                     int myDrawCount = state.Hands[myPlayer].Count - 1;
@@ -45,9 +45,9 @@ namespace CardChess.Cards
                         cardManager.DrawMultiple(myPlayer, myDrawCount);
                     }
                 }
-                MainForm.Instance.AddLog($"[패 털이] 발동! {state.CurrentTurn}가 손패를 모두 버리고 새로 뽑았습니다.");
+                MainForm.Instance.AddLog($"[생각의 압수] 발동! {state.CurrentTurn}가 손패를 모두 버리고 새로 뽑았습니다.");
             }
-            else if (Name == "카드 뺏기")
+            else if (Name == "완벽한 약탈")
             {
                 // 현재 턴인 플레이어(나)와 상대 플레이어 구별
                 PlayerType myPlayer = state.CurrentTurn;
@@ -86,16 +86,16 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog("상대방의 손패가 비어있어 카드를 뺏을 수 없습니다.");
                 }
             }
-            else if (Name == "턴 추가")
+            else if (Name == "시간 왜곡")
             {
                 PlayerType myPlayer = state.CurrentTurn;
 
                 // GameState에 한 번 더 행동할 수 있는 권한을 부여합니다.
                 state.IsExtraTurnGranted = true;
 
-               MainForm.Instance.AddLog($"{myPlayer}가 [턴 추가] 카드를 발동! 다음 상대방의 턴이 스킵됩니다.");
+               MainForm.Instance.AddLog($"{myPlayer}가 [시간 왜곡] 카드를 발동! 다음 상대방의 턴이 스킵됩니다.");
             }
-            else if (Name == "랜덤 실행")
+            else if (Name == "도둑들의 경매")
             {
                 PlayerType myPlayer = state.CurrentTurn;
                 Random rand = new Random();
@@ -103,7 +103,7 @@ namespace CardChess.Cards
                 // 덱에 카드가 최소 2장 이상 있는지 확인
                 if (state.SharedDeck.Count >= 2)
                 {
-                    MainForm.Instance.AddLog($"[랜덤 실행] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
+                    MainForm.Instance.AddLog($"[도둑들의 경매] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
 
                     for (int i = 0; i < 2; i++)
                     {
