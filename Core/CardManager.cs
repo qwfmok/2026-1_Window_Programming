@@ -62,21 +62,29 @@ namespace CardChess.Core
 
         public void DrawCard(PlayerType player)
         {
-            // 이제 개인 덱이 아니라 SharedDeck에서 뽑습니다!
+            const int maxHandCount = 8;
+
+            if (!_state.Hands.ContainsKey(player))
+                return;
+
+            // 손패가 8장이면 더 이상 뽑지 않음
+            if (_state.Hands[player].Count >= maxHandCount)
+            {
+                MainForm.Instance.AddLog($"[{player}] 손패가 8장이라 더 이상 카드를 뽑을 수 없습니다.");
+                return;
+            }
+
             if (_state.SharedDeck.Count > 0)
             {
                 ICard card = _state.SharedDeck.Pop();
-                if (_state.Hands.ContainsKey(player))
-                {
-                    // 손패 제한(예: 8장) 방어 로직 추가 가능
-                    _state.Hands[player].Add(card);
-                }
+                _state.Hands[player].Add(card);
             }
             else
             {
-                MainForm.Instance.AddLog($"[경고] 덱에 남은 카드가 없습니다!");
+                MainForm.Instance.AddLog("[경고] 덱에 남은 카드가 없습니다!");
             }
         }
+
         public void DrawMultiple(PlayerType player, int count)
         {
             for (int i = 0; i < count; i++)

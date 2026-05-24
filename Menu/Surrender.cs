@@ -19,7 +19,7 @@ namespace CardChess.Menu
             // 버튼 크기와 위치 좌표 정의
             Button btnSurrender = new Button();
             btnSurrender.Size = new Size(100, 40);
-            btnSurrender.Location = new Point(1460, 760);
+            btnSurrender.Location = new Point(1085, 452);
 
             // 버튼의 윈도우 기본 테두리를 제거
             btnSurrender.FlatStyle = FlatStyle.Flat;

@@ -24,12 +24,13 @@ namespace CardChess
         // --- 폼 기본 디자인 컨트롤 ---
         private Panel pnlPlayerHand;
         private Panel pnlPlayerDeck;
-        private Panel pnlBoard; // 중앙 패널보드 여기에 보드들어감 수정하다가 이거없어져서 ㅈ될뻔
+        private Panel pnlBoard; // 중앙 패널보드 여기에 보드들어감
         private Panel pnlPlayArea;
         private ListBox logbox;
         private Panel pnlOpponentDeck;
         private Panel pnlOpponentHand;
-        private Button btnPassTurn; 
+        private Button btnPassTurn;
+        private Label lblCardDescription;
 
         // --- 드래그 앤 드롭 카드 분신 제어 ---
         private Button ghostCard = null;
@@ -219,56 +220,107 @@ namespace CardChess
 
         private void RefreshHand()
         {
-            // 카드 컨트롤들 안전하게 지우기 (패널 자체는 삭제 안 되도록)
+            // 카드 컨트롤들 안전하게 지우기
             for (int i = pnlPlayerHand.Controls.Count - 1; i >= 0; i--)
-                if (pnlPlayerHand.Controls[i] != pnlPlayerDeck) pnlPlayerHand.Controls.RemoveAt(i);
+            {
+                if (pnlPlayerHand.Controls[i] != pnlPlayerDeck)
+                    pnlPlayerHand.Controls.RemoveAt(i);
+            }
 
             for (int i = pnlOpponentHand.Controls.Count - 1; i >= 0; i--)
-                if (pnlOpponentHand.Controls[i] != pnlOpponentDeck) pnlOpponentHand.Controls.RemoveAt(i);
+            {
+                if (pnlOpponentHand.Controls[i] != pnlOpponentDeck)
+                    pnlOpponentHand.Controls.RemoveAt(i);
+            }
 
-            pnlPlayArea.Controls.Clear(); // 공용 덱이 올라갈 영역 초기화
+            pnlPlayArea.Controls.Clear();
 
-            int cardWidth = 80, cardHeight = 120, spacing = 10, startX = 10, startY = 10;
+            int cardWidth = 80;
+            int cardHeight = 120;
+            int spacingX = 10;
+            int spacingY = 10;
+            int startX = 10;
+            int startY = 10;
+            int maxColumn = 4; // 한 줄에 4장
+
             PlayerType myType = inputController.MyPlayerType;
             PlayerType oppType = (myType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
 
-            // 내 손패 그리기
+            // 내 손패 그리기: 4장씩 두 줄
             for (int i = 0; i < gameManager.State.Hands[myType].Count; i++)
             {
                 ICard card = gameManager.State.Hands[myType][i];
+
+                int col = i % maxColumn;
+                int row = i / maxColumn;
+
                 Button btnCard = new Button
                 {
                     Width = cardWidth,
                     Height = cardHeight,
-                    Left = startX + (cardWidth + spacing) * i,
-                    Top = startY,
+                    Left = startX + (cardWidth + spacingX) * col,
+                    Top = startY + (cardHeight + spacingY) * row,
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.LightGoldenrodYellow,
                     Font = new Font("맑은 고딕", 10, FontStyle.Bold),
                     Text = card.Name,
                     Tag = card
                 };
+
                 btnCard.MouseDown += CardButton_MouseDown;
+                btnCard.MouseEnter += CardButton_MouseEnter;
+                btnCard.Click += CardButton_Click;
+
                 pnlPlayerHand.Controls.Add(btnCard);
             }
 
-            //상대방 손패 그리기 (카드 뒷면 처리)
-            for (int i = 0; i < gameManager.State.Hands[oppType].Count; i++)
+            // 상대 손패 그리기: 한 줄로 표시, 공간 안에서 잘리지 않게 표시
+            int opponentCardCount = gameManager.State.Hands[oppType].Count;
+
+            int opponentCardWidth = 70;
+            int opponentCardHeight = 100;
+            int opponentStartX = 10;
+            int opponentStartY = 15;
+
+            int availableWidth = pnlOpponentHand.Width - 20;
+
+            int opponentSpacing;
+
+            if (opponentCardCount <= 1)
+            {
+                opponentSpacing = 0;
+            }
+            else
+            {
+                opponentSpacing = (availableWidth - opponentCardWidth) / (opponentCardCount - 1);
+
+                if (opponentSpacing > 85)
+                    opponentSpacing = 85;
+
+                if (opponentSpacing < 45)
+                    opponentSpacing = 45;
+            }
+
+            for (int i = 0; i < opponentCardCount; i++)
             {
                 Button btnOppCard = new Button
                 {
-                    Width = cardWidth,
-                    Height = cardHeight,
-                    Left = startX + (cardWidth + spacing) * i,
-                    Top = startY,
+                    Width = opponentCardWidth,
+                    Height = opponentCardHeight,
+                    Left = opponentStartX + opponentSpacing * i,
+                    Top = opponentStartY,
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.SlateGray,
+                    Text = "CARD",
                     Enabled = false
                 };
+
                 pnlOpponentHand.Controls.Add(btnOppCard);
             }
 
-            // '공용 덱'을 pnlPlayArea에 그리기!
+            pnlPlayerDeck.BringToFront();
+
+            // 공용 덱 표시
             Button btnSharedDeck = new Button
             {
                 Width = pnlPlayArea.Width - 10,
@@ -282,6 +334,7 @@ namespace CardChess
                 Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
                 Enabled = false
             };
+
             pnlPlayArea.Controls.Add(btnSharedDeck);
         }
 
@@ -568,6 +621,7 @@ namespace CardChess
         {
             this.pnlPlayerHand = new System.Windows.Forms.Panel();
             this.pnlPlayerDeck = new System.Windows.Forms.Panel();
+            this.lblCardDescription = new System.Windows.Forms.Label();
             this.pnlBoard = new System.Windows.Forms.Panel();
             this.pnlPlayArea = new System.Windows.Forms.Panel();
             this.logbox = new System.Windows.Forms.ListBox();
@@ -576,14 +630,13 @@ namespace CardChess
             this.lblNetworkStatus = new System.Windows.Forms.Label();
             this.btnPassTurn = new System.Windows.Forms.Button();
             this.pnlPlayerHand.SuspendLayout();
-            this.pnlOpponentHand.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlPlayerHand
             // 
             this.pnlPlayerHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pnlPlayerHand.Controls.Add(this.pnlPlayerDeck);
-            this.pnlPlayerHand.Location = new System.Drawing.Point(829, 468);
+            this.pnlPlayerHand.Location = new System.Drawing.Point(829, 498);
             this.pnlPlayerHand.Name = "pnlPlayerHand";
             this.pnlPlayerHand.Size = new System.Drawing.Size(590, 280);
             this.pnlPlayerHand.TabIndex = 13;
@@ -591,9 +644,9 @@ namespace CardChess
             // pnlPlayerDeck
             // 
             this.pnlPlayerDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlPlayerDeck.Location = new System.Drawing.Point(465, 95);
+            this.pnlPlayerDeck.Location = new System.Drawing.Point(381, 3);
             this.pnlPlayerDeck.Name = "pnlPlayerDeck";
-            this.pnlPlayerDeck.Size = new System.Drawing.Size(120, 180);
+            this.pnlPlayerDeck.Size = new System.Drawing.Size(204, 272);
             this.pnlPlayerDeck.TabIndex = 7;
             // 
             // pnlBoard
@@ -606,7 +659,7 @@ namespace CardChess
             // pnlPlayArea
             // 
             this.pnlPlayArea.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlPlayArea.Location = new System.Drawing.Point(1295, 268);
+            this.pnlPlayArea.Location = new System.Drawing.Point(1295, 211);
             this.pnlPlayArea.Name = "pnlPlayArea";
             this.pnlPlayArea.Size = new System.Drawing.Size(120, 180);
             this.pnlPlayArea.TabIndex = 15;
@@ -614,8 +667,8 @@ namespace CardChess
             // logbox
             // 
             this.logbox.FormattingEnabled = true;
-            this.logbox.ItemHeight = 18;
-            this.logbox.Location = new System.Drawing.Point(829, 268);
+            this.logbox.ItemHeight = 15;
+            this.logbox.Location = new System.Drawing.Point(829, 207);
             this.logbox.Name = "logbox";
             this.logbox.Size = new System.Drawing.Size(460, 184);
             this.logbox.TabIndex = 11;
@@ -631,10 +684,9 @@ namespace CardChess
             // pnlOpponentHand
             // 
             this.pnlOpponentHand.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlOpponentHand.Controls.Add(this.pnlOpponentDeck);
             this.pnlOpponentHand.Location = new System.Drawing.Point(829, 58);
             this.pnlOpponentHand.Name = "pnlOpponentHand";
-            this.pnlOpponentHand.Size = new System.Drawing.Size(590, 190);
+            this.pnlOpponentHand.Size = new System.Drawing.Size(590, 143);
             this.pnlOpponentHand.TabIndex = 12;
             // 
             // lblNetworkStatus
@@ -651,13 +703,27 @@ namespace CardChess
             // 
             // btnPassTurn
             // 
-            this.btnPassTurn.Location = new System.Drawing.Point(1169, 468);
+            this.btnPassTurn.Location = new System.Drawing.Point(829, 452);
             this.btnPassTurn.Name = "btnPassTurn";
             this.btnPassTurn.Size = new System.Drawing.Size(246, 40);
             this.btnPassTurn.TabIndex = 16;
             this.btnPassTurn.Text = "턴 넘기기";
             this.btnPassTurn.UseVisualStyleBackColor = true;
             this.btnPassTurn.Click += new System.EventHandler(this.BtnPassTurn_Click);
+            // 
+            // lblCardDescription
+            // 
+            this.lblCardDescription.AutoSize = false;
+            this.lblCardDescription.Location = new System.Drawing.Point(10, 10);
+            this.lblCardDescription.Name = "lblCardDescription";
+            this.lblCardDescription.Size = new System.Drawing.Size(184, 252);
+            this.lblCardDescription.Font = new System.Drawing.Font("맑은 고딕", 10F, System.Drawing.FontStyle.Bold);
+            this.lblCardDescription.ForeColor = System.Drawing.Color.White;
+            this.lblCardDescription.BackColor = System.Drawing.Color.Transparent;
+            this.lblCardDescription.Text = "카드 설명";
+            this.lblCardDescription.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.pnlPlayerDeck.Controls.Add(this.lblCardDescription);
+            this.lblCardDescription.ForeColor = System.Drawing.Color.Black;
             // 
             // MainForm
             // 
@@ -671,7 +737,6 @@ namespace CardChess
             this.Name = "MainForm";
             this.Text = "Card Chess Game";
             this.pnlPlayerHand.ResumeLayout(false);
-            this.pnlOpponentHand.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -686,6 +751,43 @@ namespace CardChess
             }
             base.OnFormClosed(e);
         }
-        
+
+        private void CardButton_MouseEnter(object sender, EventArgs e)
+        {
+            Button cardButton = sender as Button;
+
+            if (cardButton == null)
+                return;
+
+            ICard card = cardButton.Tag as ICard;
+
+            if (card == null)
+                return;
+
+            ShowCardDescription(card);
+        }
+
+        private void CardButton_Click(object sender, EventArgs e)
+        {
+            Button cardButton = sender as Button;
+
+            if (cardButton == null)
+                return;
+
+            ICard card = cardButton.Tag as ICard;
+
+            if (card == null)
+                return;
+
+            ShowCardDescription(card);
+        }
+
+        private void ShowCardDescription(ICard card)
+        {
+            lblCardDescription.Text =
+                $"[{card.Name}]\n\n" +
+                $"종류: {card.Type}\n\n" +
+                $"{card.Description}";
+        }
     }
 }
