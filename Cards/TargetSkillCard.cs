@@ -75,7 +75,7 @@ namespace CardChess.Cards
         {
             var targetPiece = state.GetPieceAt(targetPos);
             PlayerType myPlayer = state.CurrentTurn;
-            Random rand = new Random();
+            Random rand = state.SharedRandom;
 
             if (Name != "부활" && targetPiece == null)
             {

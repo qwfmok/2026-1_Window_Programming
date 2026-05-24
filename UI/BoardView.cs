@@ -275,8 +275,15 @@ namespace CardChess.View
 
             foreach (var kp in pieceAnimations.ToList())
             {
-                if (!currentPieces.Contains(kp.Key) && kp.Value.State != PieceStatement.Dead)
+               
+                if (kp.Value.Owner != kp.Key.Owner.ToString())
+                {
                     pieceAnimations.Remove(kp.Key);
+                }
+                else if (!currentPieces.Contains(kp.Key) && kp.Value.State != PieceStatement.Dead)
+                {
+                    pieceAnimations.Remove(kp.Key);
+                }
             }
 
             for (int row = 0; row < BoardManager.MAX_ROW; row++)

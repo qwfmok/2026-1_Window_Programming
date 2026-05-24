@@ -19,6 +19,7 @@ namespace CardChess.Core
         public void InitializeDecks(int seed)
         {
             _random = new Random(seed);
+            _state.SharedRandom = _random;
             List<ICard> deckList = new List<ICard>();
 
             // 40장을 맞추기 위해 전체 카드 세트를 2번 반복해서 넣습니다 (총 42장)
@@ -63,15 +64,22 @@ namespace CardChess.Core
         public void DrawCard(PlayerType player)
         {
             const int maxHandCount = 8;
+            if (!_state.Hands.ContainsKey(player)) return;
 
-            if (!_state.Hands.ContainsKey(player))
-                return;
-
-            // 손패가 8장이면 더 이상 뽑지 않음
             if (_state.Hands[player].Count >= maxHandCount)
             {
                 MainForm.Instance.AddLog($"[{player}] 손패가 8장이라 더 이상 카드를 뽑을 수 없습니다.");
                 return;
+            }
+
+            // 🌟 [추가] 덱을 다 썼는데 무덤에 카드가 있다면? 무덤을 섞어서 다시 덱으로!
+            if (_state.SharedDeck.Count == 0 && _state.DiscardPile.Count > 0)
+            {
+                MainForm.Instance.AddLog("덱을 모두 소모하여 무덤의 카드를 다시 섞습니다!");
+                // 공용 주사위로 무덤 섞기
+                var shuffled = _state.DiscardPile.OrderBy(x => _state.SharedRandom.Next()).ToList();
+                _state.DiscardPile.Clear();
+                foreach (var c in shuffled) _state.SharedDeck.Push(c);
             }
 
             if (_state.SharedDeck.Count > 0)
@@ -81,7 +89,7 @@ namespace CardChess.Core
             }
             else
             {
-                MainForm.Instance.AddLog("[경고] 덱에 남은 카드가 없습니다!");
+                MainForm.Instance.AddLog("[경고] 무덤까지 비어서 더 이상 뽑을 카드가 없습니다!");
             }
         }
 
@@ -95,15 +103,13 @@ namespace CardChess.Core
         public void UseCard(ICard card, Position targetPos, PlayerType player)
         {
             if (card == null) return;
-
             if (card.CanUse(targetPos, _state))
             {
                 card.Execute(targetPos, _state, this);
-
-                // 사용 후 손패에서 제거
                 if (_state.Hands.ContainsKey(player))
                 {
                     _state.Hands[player].Remove(card);
+                    _state.DiscardPile.Add(card); // 다 쓴 카드를 허공에 버리지 않고 무덤에 감
                 }
             }
         }

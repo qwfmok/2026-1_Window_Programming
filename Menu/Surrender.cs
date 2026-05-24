@@ -18,6 +18,7 @@ namespace CardChess.Menu
         {
             // 버튼 크기와 위치 좌표 정의
             Button btnSurrender = new Button();
+            btnSurrender.Name = "btnSurrender";
             btnSurrender.Size = new Size(100, 40);
             btnSurrender.Location = new Point(1085, 452);
 

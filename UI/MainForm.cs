@@ -47,6 +47,9 @@ namespace CardChess
         // --- 현재 플레이어 상태 나타내는 용도 ---
         private Image playerStateImg;
 
+        // 매번 하드디스크에서 이미지를 부르지 않도록 한 번만 저장해두는 변수
+        private Image imgCardBack;
+
         // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
         public static MainForm Instance;
 
@@ -113,8 +116,29 @@ namespace CardChess
             this.battleManager.OnTurnChanged += BattleManager_OnTurnChanged;
             this.gameManager.OnTurnEndRequired += () => { battleManager.RequestTurnEnd(); };
 
-            RefreshBoard();
+
+            //뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 불러와서 메모리 릭 차단!
+            string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
+            if (File.Exists(cardBackPath)) imgCardBack = Image.FromFile(cardBackPath);
+
             CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
+            //UI들을 깔끔하게 강제 재배치하는 함수 호출
+            RelayoutUI();
+
+            //아까 BattleManager에 만든 알람을 듣고 카드를 바로 화면에 띄우는 기능
+            this.battleManager.OnPhaseChanged += (phase) =>
+            {
+                if (phase == BattlePhase.Phase2_Play)
+                {
+                    this.BeginInvoke(new Action(() => {
+                        RefreshHand();
+                        RefreshBoard();
+                    }));
+                }
+            };
+
+            RefreshBoard();
+            
 
             // 이게 있어야 첫 턴이라는 개념이 생김
             _ = this.battleManager.ProcessNextPhase();
@@ -218,126 +242,148 @@ namespace CardChess
             RefreshHand();
         }
 
-        private void RefreshHand()
+        // ====================================================================
+        //  UI 강제 정렬 (항복 버튼 위치 고정 포함)
+        // ====================================================================
+        private void RelayoutUI()
         {
-            // 카드 컨트롤들 안전하게 지우기
-            for (int i = pnlPlayerHand.Controls.Count - 1; i >= 0; i--)
+            this.ClientSize = new Size(1584, 861);
+
+            pnlBoard.Location = new Point(50, 50);
+            pnlBoard.Size = new Size(720, 720);
+
+            lblNetworkStatus.Location = new Point(800, 50);
+
+            pnlOpponentHand.Location = new Point(800, 80);
+            pnlOpponentHand.Size = new Size(580, 120);
+
+            logbox.Location = new Point(800, 210);
+            logbox.Size = new Size(450, 160);
+
+            // 로그박스 바로 오른쪽에 공용 덱이 예쁘게 들어감
+            pnlPlayArea.Location = new Point(1260, 210);
+            pnlPlayArea.Size = new Size(120, 160);
+
+            btnPassTurn.Location = new Point(800, 380);
+            btnPassTurn.Size = new Size(200, 40);
+
+            pnlPlayerHand.Location = new Point(800, 430);
+            pnlPlayerHand.Size = new Size(580, 300);
+
+            // 카드 설명창(pnlPlayerDeck)을 pnlPlayerHand의 우측 구석에 깔끔하게 처박아둠
+            pnlPlayerDeck.Parent = pnlPlayerHand;
+            pnlPlayerDeck.Location = new Point(360, 10);
+            pnlPlayerDeck.Size = new Size(210, 280);
+
+            lblCardDescription.Parent = pnlPlayerDeck;
+            lblCardDescription.Location = new Point(5, 5);
+            lblCardDescription.Size = new Size(200, 270);
+
+            // 버그를 유발하던 쓰레기 패널 숨기기
+            if (pnlOpponentDeck != null) pnlOpponentDeck.Visible = false;
+
+            Control[] targetButtons = this.Controls.Find("btnSurrender", true);
+            if (targetButtons.Length > 0)
             {
-                if (pnlPlayerHand.Controls[i] != pnlPlayerDeck)
-                    pnlPlayerHand.Controls.RemoveAt(i);
-            }
-
-            for (int i = pnlOpponentHand.Controls.Count - 1; i >= 0; i--)
-            {
-                if (pnlOpponentHand.Controls[i] != pnlOpponentDeck)
-                    pnlOpponentHand.Controls.RemoveAt(i);
-            }
-
-            pnlPlayArea.Controls.Clear();
-
-            int cardWidth = 80;
-            int cardHeight = 120;
-            int spacingX = 10;
-            int spacingY = 10;
-            int startX = 10;
-            int startY = 10;
-            int maxColumn = 4; // 한 줄에 4장
-
-            PlayerType myType = inputController.MyPlayerType;
-            PlayerType oppType = (myType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
-
-            // 내 손패 그리기: 4장씩 두 줄
-            for (int i = 0; i < gameManager.State.Hands[myType].Count; i++)
-            {
-                ICard card = gameManager.State.Hands[myType][i];
-
-                int col = i % maxColumn;
-                int row = i / maxColumn;
-
-                Button btnCard = new Button
-                {
-                    Width = cardWidth,
-                    Height = cardHeight,
-                    Left = startX + (cardWidth + spacingX) * col,
-                    Top = startY + (cardHeight + spacingY) * row,
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.LightGoldenrodYellow,
-                    Font = new Font("맑은 고딕", 10, FontStyle.Bold),
-                    Text = card.Name,
-                    Tag = card
-                };
-
-                btnCard.MouseDown += CardButton_MouseDown;
-                btnCard.MouseEnter += CardButton_MouseEnter;
-                btnCard.Click += CardButton_Click;
-
-                pnlPlayerHand.Controls.Add(btnCard);
-            }
-
-            // 상대 손패 그리기: 한 줄로 표시, 공간 안에서 잘리지 않게 표시
-            int opponentCardCount = gameManager.State.Hands[oppType].Count;
-
-            string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
-            Image cardBackImg = null; // 카드 이미지 씌우는 변수 초기화 후 이미지 호출 1번만 해서 접근최소화
-            if (File.Exists(cardBackPath))
-            {
-                cardBackImg = Image.FromFile(cardBackPath);
-            }
-
-            int opponentCardWidth = 70;
-            int opponentCardHeight = 100;
-            int opponentStartX = 10;
-            int opponentStartY = 15;
-
-            int availableWidth = pnlOpponentHand.Width - 20;
-
-            int opponentSpacing;
-
-            if (opponentCardCount <= 1)
-            {
-                opponentSpacing = 0;
-            }
-            else
-            {
-                opponentSpacing = (availableWidth - opponentCardWidth) / (opponentCardCount - 1);
-
-                if (opponentSpacing > 85)
-                    opponentSpacing = 85;
-
-                if (opponentSpacing < 45)
-                    opponentSpacing = 45;
-            }
-
-            for (int i = 0; i < opponentCardCount; i++)
-            {
-                Button btnOppCard = new Button
-                {
-                    Width = opponentCardWidth,
-                    Height = opponentCardHeight,
-                    Left = opponentStartX + opponentSpacing * i,
-                    Top = opponentStartY,
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.SlateGray,
-                    Text = "CARD",
-                    Enabled = false
-                };
-                if (cardBackImg != null)
-                {
-                    btnOppCard.BackgroundImage = cardBackImg;
-                    btnOppCard.BackgroundImageLayout = ImageLayout.Stretch;
-                    btnOppCard.Text = "";
-                }
-                else
-                {
-                    btnOppCard.Text = "CARD"; // 텍스트 제거 및 예외 처리
-                }
-
-                pnlOpponentHand.Controls.Add(btnOppCard);
+                Control btnSur = targetButtons[0];
+                // 턴 넘기기 버튼 오른쪽 끝(Right)에서 10픽셀 띄운 위치로 고정!
+                btnSur.Location = new Point(btnPassTurn.Right + 10, btnPassTurn.Top);
+                btnSur.Size = new Size(100, 40); // 항복 버튼 사이즈
+                btnSur.BringToFront();
             }
 
             pnlPlayerDeck.BringToFront();
+        }
 
-            // 공용 덱 표시
+        private void RefreshHand()
+        {
+            // 1. 기존 컨트롤 안전하게 폭파 (메모리 릭 방지)
+            for (int i = pnlPlayerHand.Controls.Count - 1; i >= 0; i--)
+            {
+                Control c = pnlPlayerHand.Controls[i];
+                if (c != pnlPlayerDeck) // 설명창은 살려둠
+                {
+                    pnlPlayerHand.Controls.RemoveAt(i);
+                    c.Dispose();
+                }
+            }
+            for (int i = pnlOpponentHand.Controls.Count - 1; i >= 0; i--)
+            {
+                Control c = pnlOpponentHand.Controls[i];
+                pnlOpponentHand.Controls.RemoveAt(i);
+                c.Dispose();
+            }
+            for (int i = pnlPlayArea.Controls.Count - 1; i >= 0; i--)
+            {
+                Control c = pnlPlayArea.Controls[i];
+                pnlPlayArea.Controls.RemoveAt(i);
+                c.Dispose();
+            }
+
+            int cardWidth = 80, cardHeight = 120, spacingX = 10, spacingY = 10, startX = 10, startY = 10;
+            PlayerType myType = inputController.MyPlayerType;
+            PlayerType oppType = (myType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
+
+            // 2. 내 손패 그리기 (설명창을 침범하지 않게 좌측에 차곡차곡 쌓임)
+            if (gameManager.State.Hands.ContainsKey(myType))
+            {
+                for (int i = 0; i < gameManager.State.Hands[myType].Count; i++)
+                {
+                    ICard card = gameManager.State.Hands[myType][i];
+                    int col = i % 4; // 한 줄에 4장
+                    int row = i / 4;
+
+                    Button btnCard = new Button
+                    {
+                        Width = cardWidth,
+                        Height = cardHeight,
+                        Left = startX + (cardWidth + spacingX) * col,
+                        Top = startY + (cardHeight + spacingY) * row,
+                        FlatStyle = FlatStyle.Flat,
+                        BackColor = Color.LightGoldenrodYellow,
+                        Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+                        Text = card.Name,
+                        Tag = card
+                    };
+                    btnCard.MouseDown += CardButton_MouseDown;
+                    btnCard.MouseEnter += CardButton_MouseEnter;
+                    btnCard.Click += CardButton_Click;
+                    pnlPlayerHand.Controls.Add(btnCard);
+                }
+            }
+
+            // 3. 상대방 손패 그리기
+            if (gameManager.State.Hands.ContainsKey(oppType))
+            {
+                int oppCount = gameManager.State.Hands[oppType].Count;
+                int oppSpacing = oppCount > 1 ? (pnlOpponentHand.Width - 20 - 70) / (oppCount - 1) : 85;
+                if (oppSpacing > 85) oppSpacing = 85;
+                if (oppSpacing < 45) oppSpacing = 45;
+
+                for (int i = 0; i < oppCount; i++)
+                {
+                    Button btnOppCard = new Button
+                    {
+                        Width = 70,
+                        Height = 100,
+                        Left = 10 + oppSpacing * i,
+                        Top = 10,
+                        FlatStyle = FlatStyle.Flat,
+                        BackColor = Color.SlateGray,
+                        Enabled = false
+                    };
+                    if (imgCardBack != null)
+                    {
+                        btnOppCard.BackgroundImage = imgCardBack;
+                        btnOppCard.BackgroundImageLayout = ImageLayout.Stretch;
+                    }
+                    else btnOppCard.Text = "CARD";
+
+                    pnlOpponentHand.Controls.Add(btnOppCard);
+                }
+            }
+
+            // 4. 공용 덱 표시
             Button btnSharedDeck = new Button
             {
                 Width = pnlPlayArea.Width - 10,
@@ -348,17 +394,18 @@ namespace CardChess
                 BackColor = Color.SaddleBrown,
                 ForeColor = Color.White,
                 Font = new Font("맑은 고딕", 12, FontStyle.Bold),
-                Text = $"덱\n{gameManager.State.SharedDeck.Count}장",
+                Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
                 Enabled = false
             };
-
-            if (cardBackImg != null)
+            if (imgCardBack != null)
             {
-                btnSharedDeck.BackgroundImage = cardBackImg;
+                btnSharedDeck.BackgroundImage = imgCardBack;
                 btnSharedDeck.BackgroundImageLayout = ImageLayout.Stretch;
             }
-
             pnlPlayArea.Controls.Add(btnSharedDeck);
+
+            // 5. Z-Index 정리 (설명창이 카드 뒤에 숨지 않게 앞으로 당김)
+            pnlPlayerDeck.BringToFront();
         }
 
         private void CardButton_MouseDown(object sender, MouseEventArgs e)
