@@ -23,7 +23,7 @@ namespace CardChess.Cards
             Description = description;
 
             // 카드별로 턴 제한이 다르면 여기서 세팅 가능
-            if (name == "애니비아 벽")
+            if (name == "방벽 건설")
             {
                 Duration = 2;
             }  
@@ -38,7 +38,7 @@ namespace CardChess.Cards
             }
 
             // '폰 소환' 카드일 경우에만 아군 진영인지 추가로 검사
-            if (Name == "폰 소환")
+            if (Name == "증원")
             {
                 PlayerType myPlayer = state.CurrentTurn;
 
@@ -59,23 +59,23 @@ namespace CardChess.Cards
 
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
-            if (Name == "애니비아 벽")
+            if (Name == "방벽 건설")
             {
                 string wallKey = $"{targetPos.Row},{targetPos.Col}";
 
                 if (!state.ActiveWalls.ContainsKey(wallKey))
                 {
                     state.ActiveWalls.Add(wallKey, Duration);
-                    MainForm.Instance.AddLog($"[지형 생성] {targetPos.Row},{targetPos.Col} 칸에 벽 상태가 부여되었습니다. ({Duration}턴 유지)");
+                    MainForm.Instance.AddLog($"[방벽을 건설합니다.] {targetPos.Row},{targetPos.Col} 칸에 벽 상태가 부여되었습니다. ({Duration}턴 유지)");
                 }
             }
-            else if (Name == "폰 소환")
+            else if (Name == "증원")
             {
                 PlayerType currentPlayer = state.CurrentTurn;
                 Pawn newPawn = new Pawn(currentPlayer, targetPos);
                 state.SetPieceAt(targetPos, newPawn);
 
-                MainForm.Instance.AddLog($"[기물 소환] {targetPos.Row},{targetPos.Col} 칸에 {currentPlayer}의 폰이 소환되었습니다.");
+                MainForm.Instance.AddLog($"[병사를 증원합니다.] {targetPos.Row},{targetPos.Col} 칸에 {currentPlayer}의 폰이 소환되었습니다.");
             }
         }
     }
