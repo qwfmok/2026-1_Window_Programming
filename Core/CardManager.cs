@@ -39,11 +39,11 @@ namespace CardChess.Core
                 deckList.Add(new ActiveSkillCard("완벽한 약탈", "상대의 손패 1장을 빼앗아옵니다."));
                 deckList.Add(new ActiveSkillCard("시간 왜곡", "상대의 다음 턴을 스킵합니다."));
                 deckList.Add(new ActiveSkillCard("도둑들의 경매", "덱에서 카드 2장을 무작위로 즉시 시전"));
-                deckList.Add(new TargetSkillCard("부활", "내 진영의 빈칸에 내 기물 부활"));
-                deckList.Add(new TargetSkillCard("컨트롤 탈취", "상대 기물 1개의 소유권 강탈"));
-                deckList.Add(new TargetSkillCard("기물 위치교환", "내 무작위 기물과 위치 교환"));
-                deckList.Add(new TargetSkillCard("존야", "1턴 동안 무적 및 행동 불가"));
-                deckList.Add(new TargetSkillCard("복제", "인접한 빈칸 중 1곳에 기물 복제"));
+                deckList.Add(new TargetSkillCard("죽은 자의 소생", "내 진영의 빈칸에 내 기물 부활"));
+                deckList.Add(new TargetSkillCard("마인드 컨트롤", "상대 기물 1개의 소유권 강탈"));
+                deckList.Add(new TargetSkillCard("시프트 체인지", "내 무작위 기물과 위치 교환"));
+                deckList.Add(new TargetSkillCard("존야의 시계", "1턴 동안 무적 및 행동 불가"));
+                deckList.Add(new TargetSkillCard("그림자분신술", "인접한 빈칸 중 1곳에 기물 복제"));
                 deckList.Add(new TargetSkillCard("판도라", "무작위 기물로 변이 (킹 제외)"));
                 deckList.Add(new TrapCard("갬블 게임", "50% 확률로 공격 반사 및 파괴"));
             }
