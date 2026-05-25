@@ -188,17 +188,82 @@ namespace CardChess
         private void InitCanvasBoardEvents()
         {
             pnlBoard.Controls.Clear();
-            pnlBoard.Paint += (s, e) => boardView.DrawBoard(e.Graphics);
+
+            // 기존 Paint 이벤트가 중복 연결되는 것을 방지
+            pnlBoard.Paint -= PnlBoard_Paint;
+            pnlBoard.Paint += PnlBoard_Paint;
+
+            pnlBoard.MouseClick -= PnlBoard_MouseClick;
             pnlBoard.MouseClick += PnlBoard_MouseClick;
 
+            pnlBoard.MouseMove -= PnlBoard_MouseMove;
             pnlBoard.MouseMove += PnlBoard_MouseMove;
+
+            pnlBoard.MouseLeave -= PnlBoard_MouseLeave;
             pnlBoard.MouseLeave += PnlBoard_MouseLeave;
 
             pnlBoard.AllowDrop = true;
+
+            pnlBoard.DragEnter -= BoardPanel_DragEnter;
             pnlBoard.DragEnter += BoardPanel_DragEnter;
+
+            pnlBoard.DragDrop -= BoardPanel_DragDrop;
             pnlBoard.DragDrop += BoardPanel_DragDrop;
 
             boardView.SyncPiecesWithBackend();
+        }
+
+        private void PnlBoard_Paint(object sender, PaintEventArgs e)
+        {
+            boardView.DrawBoard(e.Graphics);
+
+            // 체크를 건 기물 칸을 가장 마지막에 그려서 확실히 보이게 함
+            DrawCheckWarning(e.Graphics);
+        }
+
+        private void DrawCheckWarning(Graphics g)
+        {
+            if (gameManager == null || gameManager.State == null)
+                return;
+
+            List<Position> checkingPieces = gameManager.GetCheckingPiecePositions();
+
+            if (checkingPieces == null || checkingPieces.Count == 0)
+                return;
+
+            foreach (Position pos in checkingPieces)
+            {
+                DrawCheckingPieceCell(g, pos);
+            }
+        }
+
+        private void DrawCheckingPieceCell(Graphics g, Position pos)
+        {
+            int boardStartX = 40;
+            int boardStartY = 35;
+            int cellSize = 80;
+
+            int drawRow = pos.Row;
+            int drawCol = pos.Col;
+
+            if (inputController != null && inputController.MyPlayerType == PlayerType.Player2)
+            {
+                drawRow = 7 - pos.Row;
+                drawCol = 7 - pos.Col;
+            }
+
+            Rectangle cellRect = new Rectangle(
+                boardStartX + drawCol * cellSize,
+                boardStartY + drawRow * cellSize,
+                cellSize,
+                cellSize
+            );
+
+            // 은은한 주황색 칸만 표시
+            using (SolidBrush brush = new SolidBrush(Color.FromArgb(110, Color.Orange)))
+            {
+                g.FillRectangle(brush, cellRect);
+            }
         }
 
         private void GameLoopTimer_Tick(object sender, EventArgs e)
@@ -211,11 +276,13 @@ namespace CardChess
         {
             if (!battleManager.IsPlayable)
                 return;
+
             if (gameManager.State.IsGameOver)
             {
                 ShowGameEndMessageIfNeeded();
                 return;
             }
+
             if (gameManager.CurrentTurn != inputController.MyPlayerType)
             {
                 return;
@@ -224,14 +291,21 @@ namespace CardChess
             if (boardView.TryConvertPixelToPosition(e.X, e.Y, out Position position))
             {
                 IPiece clickedPiece = gameManager.State.GetPieceAt(position);
+
                 if (clickedPiece != null && boardView.PieceAnimations.ContainsKey(clickedPiece))
                 {
                     boardView.PieceAnimations[clickedPiece].Onclick();
                 }
+
                 inputController.OnBoardClicked(position);
                 boardView.HandleMovementAnimation();
 
                 UpdateBoardHighlights(position);
+
+                // 체크 표시 포함해서 보드 강제 갱신
+                RefreshBoard();
+                pnlBoard.Invalidate();
+
                 ShowGameEndMessageIfNeeded();
             }
         }
@@ -559,53 +633,81 @@ namespace CardChess
                     lblNetworkStatus.Text = "네트워크: 연결됨! 🟢";
                     lblNetworkStatus.ForeColor = Color.Green;
                 }
+
                 AddLog("✨ 네트워크가 연결되었습니다! 게임을 시작하세요.");
             }
             else if (msg.StartsWith("MOVE"))
             {
                 string[] p = msg.Split(',');
+
                 Position from = new Position(int.Parse(p[1]), int.Parse(p[2]));
                 Position to = new Position(int.Parse(p[3]), int.Parse(p[4]));
 
                 gameManager.IsLocalAction = false;
-                gameManager.TryMoveOrAttack(from, to, out _);
+
+                string networkMoveMessage;
+                bool networkMoveSuccess = gameManager.TryMoveOrAttack(from, to, out networkMoveMessage);
+
                 gameManager.IsLocalAction = true;
 
-                // 🌟 추가됨: 상대방 행동 로그 출력
                 AddLog($"[네트워크] 상대방이 ({from.Row}, {from.Col})에서 ({to.Row}, {to.Col})(으)로 기물을 이동했습니다.");
 
-                // 🌟 핵심: 내부 이동 처리 후 멈춰있던 애니메이션과 화면을 강제로 갱신!
+                if (!string.IsNullOrEmpty(networkMoveMessage))
+                {
+                    if (networkMoveSuccess)
+                        AddLog($"[네트워크] {networkMoveMessage}");
+                    else
+                        AddLog($"[네트워크 실패] {networkMoveMessage}");
+                }
+
                 boardView.HandleMovementAnimation();
+
                 RefreshBoard();
                 RefreshHand();
+                pnlBoard.Invalidate();
+
                 ShowGameEndMessageIfNeeded();
             }
             else if (msg.StartsWith("CARD"))
             {
                 string[] p = msg.Split(',');
+
                 string cardName = p[1];
                 Position target = new Position(int.Parse(p[2]), int.Parse(p[3]));
 
-                ICard cardToUse = gameManager.State.Hands[gameManager.CurrentTurn].FirstOrDefault(c => c.Name == cardName);
+                ICard cardToUse = gameManager.State.Hands[gameManager.CurrentTurn]
+                    .FirstOrDefault(c => c.Name == cardName);
+
                 if (cardToUse != null)
                 {
                     gameManager.IsLocalAction = false;
-                    gameManager.TryUseCard(cardToUse, target, out _);
+
+                    string networkCardMessage;
+                    bool networkCardSuccess = gameManager.TryUseCard(cardToUse, target, out networkCardMessage);
+
                     gameManager.IsLocalAction = true;
 
-                    // 상대방 카드 로그 출력
                     AddLog($"[네트워크] 상대방이 '{cardName}' 카드를 사용했습니다!");
+
+                    if (!string.IsNullOrEmpty(networkCardMessage))
+                    {
+                        if (networkCardSuccess)
+                            AddLog($"[네트워크] {networkCardMessage}");
+                        else
+                            AddLog($"[네트워크 카드 실패] {networkCardMessage}");
+                    }
                 }
                 else
                 {
-                    // 덱이 엇갈려서 카드를 못 찾았을 때 확실하게 알려주는 에러 로그
-                    AddLog($"[동기화 오류] 상대방이 '{cardName}'을(를) 썼지만, 내 화면의 상대 손패에는 그 카드가 없습니다! ");
+                    AddLog($"[동기화 오류] 상대방이 '{cardName}'을(를) 썼지만, 내 화면의 상대 손패에는 그 카드가 없습니다!");
                 }
 
-                // 🌟 핵심: 화면 및 애니메이션 갱신
                 boardView.HandleMovementAnimation();
+
                 RefreshBoard();
                 RefreshHand();
+                pnlBoard.Invalidate();
+
                 ShowGameEndMessageIfNeeded();
             }
             else if (msg == "PASS")
@@ -618,6 +720,7 @@ namespace CardChess
 
                 RefreshBoard();
                 RefreshHand();
+                pnlBoard.Invalidate();
             }
             else if (msg == "SURRENDER")
             {
@@ -625,16 +728,25 @@ namespace CardChess
                 gameManager.State.Winner = inputController.MyPlayerType;
 
                 RefreshBoard();
+                pnlBoard.Invalidate();
+
                 ShowGameEndMessageIfNeeded();
             }
         }
 
         private void ShowGameEndMessageIfNeeded()
         {
-            if (gameEndMessageShown || !gameManager.State.IsGameOver) return;
-            string message = gameManager.State.Winner.HasValue ? $"{gameManager.State.Winner.Value} 승리!" : "게임이 종료되었습니다.";
-            logbox.Items.Add(message);
+            if (gameEndMessageShown || !gameManager.State.IsGameOver)
+                return;
+
+            string message = gameManager.State.Winner.HasValue
+                ? $"{gameManager.State.Winner.Value} 승리!"
+                : "게임이 종료되었습니다.";
+
+            AddLog(message);
+
             gameEndMessageShown = true;
+
             MessageBox.Show(message, "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.Close();
         }
