@@ -46,8 +46,38 @@ namespace CardChess.Cards
                         return targetPos.Row >= 0 && targetPos.Row <= 3;
                     }
                 case "마인드 컨트롤":
-                    // 킹, 퀸을 제외한 '상대방 기물'에만 사용 가능
-                    return piece != null && piece.Owner != myPlayer && piece.Type != PieceType.King && piece.Type != PieceType.Queen;
+                    // 기본 검증: 찍은 칸에 기물이 있어야 하고, 내 기물이 아니어야 함 (상대 기물 타겟 필수)
+                    if (piece == null || piece.Owner == myPlayer)
+                    {
+                        return false;
+                    }
+
+                    // 밸런스 제한: 킹과 퀸은 컨트롤을 탈취할 수 없음
+                    if (piece.Type == PieceType.King || piece.Type == PieceType.Queen)
+                    {
+                        return false;
+                    }
+
+                    // 위치 제한: 상대방의 가장 깊숙한 뒷줄 1~2열은 조종 불가
+                    if (myPlayer == PlayerType.Player1)
+                    {
+                        // 1P가 쓸 때: 2P의 최상단 뒷줄인 Row 0, Row 1 이면 사용 불가(false)
+                        if (targetPos.Row == 0 || targetPos.Row == 1)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // 2P가 쓸 때: 1P의 최하단 뒷줄인 Row 7, Row 6 이면 사용 불가(false)
+                        if (targetPos.Row == 7 || targetPos.Row == 6)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // 위의 모든 까다로운 방어 조건을 다 통과했다면 사용 가능
+                    return true;
 
                 //  순수하게 '내 기물' 전체(킹 포함)에 쓸 수 있는 스킬들
                 case "시프트 체인지":
