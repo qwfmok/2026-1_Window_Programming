@@ -144,12 +144,16 @@ namespace CardChess.View
                             if (coords.Length < 2) continue;
 
                             // 안전하게 int로 변환 (int.Parse 대신 TryParse 사용)
-                            if (!int.TryParse(coords[0], out int row)) continue;
-                            if (!int.TryParse(coords[1], out int col)) continue;
+                            if (!int.TryParse(coords[0], out int logicalRow)) continue;
+                            if (!int.TryParse(coords[1], out int logicalCol)) continue;
+
+                            // [수정] 2P 시점일 때 보드를 뒤집어주는 헬퍼 함수 통과시키기!
+                            int vRow = GetVisualRow(logicalRow);
+                            int vCol = GetVisualCol(logicalCol);
 
                             // 타일의 실제 X, Y 좌표 계산
-                            float x = XOffset + col * CellWidth;
-                            float y = YOffset + row * CellHeight;
+                            float x = XOffset + logicalCol * CellWidth;
+                            float y = YOffset + logicalRow * CellHeight;
 
                             // 반투명한 얼음색(하늘색)으로 타일 채우기 (Alpha 120)
                             using (SolidBrush iceBrush = new SolidBrush(Color.FromArgb(120, 135, 206, 235)))
