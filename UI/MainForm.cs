@@ -60,13 +60,20 @@ namespace CardChess
             { "도둑들의 경매", "card_1_auction" },
             { "방벽 건설", "card_1_wallconst" },
             { "증원", "card_1_reinforce" },
+            { "존야의 시계", "card_1_zhonya" },
+            { "시프트 체인지", "card_1_change" },
+            { "죽은 자의 소생", "card_1_revive" },
+            { "판도라", "card_1_pandora" },
+            { "마인드 컨트롤", "card_1_mindcontrol" },
+            { "그림자분신술", "card_1_kagebunshin" },
             { "갬블 게임", "card_1_gamble" }
 
             // 이후 신규 카드를 추가할 때는 { "스킬 이름", "파일 이름(확장자 불필요)" }, 로 개행하면 됨 + 마지막 행은 ,를 붙이지 않는다
         };
 
-        // 매번 하드디스크에서 이미지를 부르지 않도록 한 번만 저장해두는 변수
+        // --- 게임 플레이 화면 UI 이미지 변수부 ---
         private Image imgCardBack;
+        private Image imgPlayareabg;
 
         // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
         public static MainForm Instance;
@@ -92,6 +99,14 @@ namespace CardChess
                 this.BackgroundImageLayout = ImageLayout.Stretch;
             }
             this.DoubleBuffered = true; // 버퍼링 깜빡이는거 방지
+            string playAreaBgPath = Path.Combine(Application.StartupPath, "Assets", "playarea_bg.png");
+            if (File.Exists(playAreaBgPath))
+            {
+                imgPlayareabg = Image.FromFile(playAreaBgPath);
+            }
+
+            CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
+            RelayoutUI();
 
             // 턴 나타내는 버튼
             string imgPath = Path.Combine(Application.StartupPath, "Assets", "button_long_player_state.png");
@@ -349,27 +364,58 @@ namespace CardChess
             pnlOpponentHand.Location = new Point(800, 80);
             pnlOpponentHand.Size = new Size(580, 120);
 
+            if (imgPlayareabg != null)
+            {
+                pnlOpponentHand.BackgroundImage = imgPlayareabg;
+                pnlOpponentHand.BackgroundImageLayout = ImageLayout.Stretch;
+            }
+
             logbox.Location = new Point(800, 210);
             logbox.Size = new Size(450, 160);
+            logbox.BackColor = Color.FromArgb(40, 40, 40);
+            logbox.ForeColor = Color.White;
 
             // 로그박스 바로 오른쪽에 공용 덱이 예쁘게 들어감
             pnlPlayArea.Location = new Point(1260, 210);
             pnlPlayArea.Size = new Size(120, 160);
+
+            pnlPlayArea.BackgroundImage = null;
+            pnlPlayArea.BackColor = Color.Transparent;
+            pnlPlayArea.BorderStyle = BorderStyle.None;
+
+            if (imgPlayareabg != null)
+            {
+                pnlPlayArea.BackgroundImage = imgPlayareabg;
+                pnlPlayArea.BackgroundImageLayout = ImageLayout.Stretch;
+            }
+
+            pnlPlayArea.BackgroundImage = null;
+            pnlPlayArea.BackColor = Color.Transparent;
+            pnlPlayArea.BorderStyle = BorderStyle.None;
 
             btnPassTurn.Location = new Point(800, 380);
             btnPassTurn.Size = new Size(200, 40);
 
             pnlPlayerHand.Location = new Point(800, 430);
             pnlPlayerHand.Size = new Size(580, 300);
+            if (imgPlayareabg != null)
+            {
+                pnlPlayerHand.BackgroundImage = imgPlayareabg;
+                pnlPlayerHand.BackgroundImageLayout = ImageLayout.Stretch;
+            }
 
             // 카드 설명창(pnlPlayerDeck)을 pnlPlayerHand의 우측 구석에 깔끔하게 처박아둠
             pnlPlayerDeck.Parent = pnlPlayerHand;
             pnlPlayerDeck.Location = new Point(360, 10);
             pnlPlayerDeck.Size = new Size(210, 280);
+            pnlPlayerDeck.BackColor = Color.FromArgb(200, 20, 20, 20);
+            pnlPlayerDeck.BorderStyle = BorderStyle.FixedSingle;
 
             lblCardDescription.Parent = pnlPlayerDeck;
             lblCardDescription.Location = new Point(5, 5);
             lblCardDescription.Size = new Size(200, 270);
+            lblCardDescription.BackColor = Color.Transparent;
+            lblCardDescription.ForeColor = Color.White;
 
             // 버그를 유발하던 쓰레기 패널 숨기기
             if (pnlOpponentDeck != null) pnlOpponentDeck.Visible = false;
@@ -497,8 +543,8 @@ namespace CardChess
                 Height = pnlPlayArea.Height - 10,
                 Left = 5,
                 Top = 5,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.SaddleBrown,
+                BackColor = Color.Transparent,
+                FlatAppearance = { BorderSize = 0, MouseOverBackColor = Color.Transparent, MouseDownBackColor = Color.Transparent },
                 ForeColor = Color.White,
                 Font = new Font("맑은 고딕", 12, FontStyle.Bold),
                 Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
