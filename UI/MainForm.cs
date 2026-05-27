@@ -320,6 +320,7 @@ namespace CardChess
                 // 체크 표시 포함해서 보드 강제 갱신
                 RefreshBoard();
                 pnlBoard.Invalidate();
+                RefreshHand();
 
                 ShowGameEndMessageIfNeeded();
             }
@@ -559,6 +560,7 @@ namespace CardChess
 
             // 5. Z-Index 정리 (설명창이 카드 뒤에 숨지 않게 앞으로 당김)
             pnlPlayerDeck.BringToFront();
+            HighlightSelectedCard();
         }
 
         private void CardButton_MouseDown(object sender, MouseEventArgs e)
@@ -1041,6 +1043,106 @@ namespace CardChess
                 return;
 
             ShowCardDescription(card);
+        }
+
+        // ====================================================================
+        // 단축키(키보드 1~8)로 손패 선택 및 ESC 취소 기능
+        // ====================================================================
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // 내 턴이 아니거나 조작 불가능한 상태면 키보드 입력 무시
+            if (!battleManager.IsPlayable || gameManager.CurrentTurn != inputController.MyPlayerType)
+                return base.ProcessCmdKey(ref msg, keyData);
+
+            int cardIndex = -1;
+
+            // 눌린 키가 1~8번(키패드 포함)인지 확인
+            switch (keyData)
+            {
+                case Keys.D1: case Keys.NumPad1: cardIndex = 0; break;
+                case Keys.D2: case Keys.NumPad2: cardIndex = 1; break;
+                case Keys.D3: case Keys.NumPad3: cardIndex = 2; break;
+                case Keys.D4: case Keys.NumPad4: cardIndex = 3; break;
+                case Keys.D5: case Keys.NumPad5: cardIndex = 4; break;
+                case Keys.D6: case Keys.NumPad6: cardIndex = 5; break;
+                case Keys.D7: case Keys.NumPad7: cardIndex = 6; break;
+                case Keys.D8: case Keys.NumPad8: cardIndex = 7; break;
+
+                // ESC 키를 누르면 선택 취소
+                case Keys.Escape:
+                    inputController.CancelSelection();
+                    AddLog("[키보드] 선택이 취소되었습니다.");
+                    HighlightSelectedCard();
+                    return true;
+            }
+
+            // 1~8번 키를 눌렀을 때
+            if (cardIndex >= 0)
+            {
+                PlayerType myType = inputController.MyPlayerType;
+
+                // 해당 번호의 카드가 내 손패에 존재할 경우에만 실행
+                if (gameManager.State.Hands.ContainsKey(myType) && gameManager.State.Hands[myType].Count > cardIndex)
+                {
+                    ICard cardToSelect = gameManager.State.Hands[myType][cardIndex];
+
+                    // 입력 컨트롤러에 '이 카드 선택했음' 알림 (마우스로 클릭한 것과 동일한 효과!)
+                    inputController.OnCardClicked(cardToSelect);
+
+                    // 선택한 카드의 설명을 좌측 설명창에 바로 띄워줌
+                    ShowCardDescription(cardToSelect);
+                    HighlightSelectedCard();
+
+                    // 스킬 종류에 따라 안내 로그 출력
+                    if (cardToSelect.Type == CardType.ActiveSkill || cardToSelect.Type == CardType.Trap)
+                        AddLog($"[키보드] '{cardToSelect.Name}' 선택됨. 체스판 아무 곳이나 클릭하면 발동됩니다!");
+                    else
+                        AddLog($"[키보드] '{cardToSelect.Name}' 선택됨. 스킬을 사용할 타겟(체스판)을 마우스로 클릭하세요!");
+
+                    return true; 
+                }
+            }
+
+            // 위에서 처리되지 않은 나머지 키보드 입력은 폼이 원래 하던 대로 처리하도록 넘김
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        // ====================================================================
+        // 선택된 카드 시각적 강조 (위로 15px 띄우고 황금색 테두리)
+        // ====================================================================
+        private void HighlightSelectedCard()
+        {
+            int cardHeight = 120, spacingY = 10, startY = 10;
+            PlayerType myType = inputController.MyPlayerType;
+
+            if (!gameManager.State.Hands.ContainsKey(myType)) return;
+            var myHand = gameManager.State.Hands[myType];
+
+            foreach (Control c in pnlPlayerHand.Controls)
+            {
+                if (c is Button btnCard && btnCard.Tag is ICard card)
+                {
+                    int index = myHand.IndexOf(card);
+                    if (index < 0) continue;
+
+                    int row = index / 4; // 몇 번째 줄인지 계산
+                    int baseTop = startY + (cardHeight + spacingY) * row; // 카드의 원래 Y좌표
+
+                    if (inputController.SelectedCard == card)
+                    {
+                        btnCard.Top = baseTop - 15;
+                        btnCard.BackColor = Color.Gold;
+                        btnCard.FlatAppearance.BorderColor = Color.OrangeRed;
+                    }
+                    else
+                    {
+                        // 선택되지 않은 카드: 원래 위치와 기본 색상으로 얌전하게 복구
+                        btnCard.Top = baseTop;
+                        btnCard.BackColor = Color.LightGoldenrodYellow;
+                        btnCard.FlatAppearance.BorderColor = Color.Black;
+                    }
+                }
+            }
         }
 
         private void ShowCardDescription(ICard card)
