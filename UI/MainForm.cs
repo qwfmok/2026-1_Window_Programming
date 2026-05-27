@@ -1,6 +1,7 @@
 ﻿using CardChess.Cards;
 using CardChess.Core;
 using CardChess.Input;
+using CardChess.Menu;
 using CardChess.Models;
 using CardChess.Pieces;
 using CardChess.View;
@@ -50,23 +51,23 @@ namespace CardChess
         // --- 카드 텍스트 인식시키는 변수부 ---
         private readonly Dictionary<string, string> cardImageMap = new Dictionary<string, string>
         {
-            { "기사 서품", "card_1_knightevo" },
-            { "골렘 연성", "card_1_rookevo" },
-            { "사제 서품", "card_1_bishopevo" },
-            { "욕망의 항아리", "card_1_bottle" },
-            { "생각의 압수", "card_1_handdeath" },
-            { "완벽한 약탈", "card_1_thief" },
+            { "기사 변신", "card_1_knightevo" },
+            { "룩 변신", "card_1_rookevo" },
+            { "비숍 변신", "card_1_bishopevo" },
+            { "카드 뽑기", "card_1_bottle" },
+            { "패 교환", "card_1_handdeath" },
+            { "카드 강탈", "card_1_thief" },
             { "시간 왜곡", "card_1_timewalk" },
-            { "도둑들의 경매", "card_1_auction" },
+            { "랜덤 실행", "card_1_auction" },
             { "방벽 건설", "card_1_wallconst" },
             { "증원", "card_1_reinforce" },
-            { "존야의 시계", "card_1_zhonya" },
-            { "시프트 체인지", "card_1_change" },
-            { "죽은 자의 소생", "card_1_revive" },
-            { "판도라", "card_1_pandora" },
-            { "마인드 컨트롤", "card_1_mindcontrol" },
-            { "그림자분신술", "card_1_kagebunshin" },
-            { "갬블 게임", "card_1_gamble" }
+            { "봉인", "card_1_zhonya" },
+            { "위치 교환", "card_1_change" },
+            { "소생", "card_1_revive" },
+            { "랜덤 변신", "card_1_pandora" },
+            { "기물 강탈", "card_1_mindcontrol" },
+            { "복제", "card_1_kagebunshin" },
+            { "랜덤 방어", "card_1_gamble" }
 
             // 이후 신규 카드를 추가할 때는 { "스킬 이름", "파일 이름(확장자 불필요)" }, 로 개행하면 됨 + 마지막 행은 ,를 붙이지 않는다
         };
@@ -78,11 +79,25 @@ namespace CardChess
         // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
         public static MainForm Instance;
 
-        // 진입점
-
+        // 1. 생성자 진입점
         public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType, int seed)
         {
             InitializeComponent();
+
+            SoundsManager.LoadALLSounds(); // 사운드의 클래스 소스파일 참조
+            CardChess.Menu.SoundsManager.PlayBGM("bg_music");
+
+            // --- 화면 버퍼 제거부 ---
+            Action<Control> enableDoubleBuffer = (control) =>
+            {
+                typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                               ?.SetValue(control, true);
+            };
+
+            enableDoubleBuffer(pnlPlayerHand);
+            enableDoubleBuffer(pnlOpponentHand);
+            enableDoubleBuffer(pnlPlayArea);
+            // --- 화면 버퍼 제거부 ---
 
             this.Width = 1600;
             this.Height = 900; // MainForm(이하 메인폼)의 최초 크기 정의
@@ -91,6 +106,7 @@ namespace CardChess
             // 폼이 생성될 때 자기 자신을 Instance 변수에 등록
             Instance = this;
 
+            // 1-1. 백그라운드 이미지
             // 메인폼 배경 이미지 설정 경로는 동일하게 바이너리/디버그의 에셋 폴더
             string bgPath = Path.Combine(Application.StartupPath, "Assets", "bg.png");
             if (File.Exists(bgPath))
@@ -108,14 +124,14 @@ namespace CardChess
             CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
             RelayoutUI();
 
-            // 턴 나타내는 버튼
+            // 1-2. 턴 나타내는 버튼
             string imgPath = Path.Combine(Application.StartupPath, "Assets", "button_long_player_state.png");
             if (File.Exists(imgPath))
             {
                 playerStateImg = Image.FromFile(imgPath);
             }
 
-            // 네트워크 끌고 들어온 흔적
+            // 1-3. Form1에서 실행된 UDP프로토콜 네트워크를 MainForm까지 유지
             this.udpProtocol = connectedUdp;
             if (this.udpProtocol != null)
             {
@@ -130,27 +146,36 @@ namespace CardChess
             {
                 if (udpProtocol != null && udpProtocol.IsConnected)
                     udpProtocol.Send(msg);
+                
+                if (msg.StartsWith("CARD")) // 글로벌 이펙트이므로 로그가 출력될 때 나오는 것이 낫다고 생각
+                {
+                    string[] p = msg.Split(',');
+                    if (p.Length > 1 && p[1] == "시간 왜곡")
+                    {
+                        boardView.TriggerClockEffect(); // 보드뷰에서 호출해오는걸로 구현했음
+                    }
+                }
             };
             this.inputController.OnLogMessage += (sender, msg) => { AddLog(msg); };
 
-            // 보드 뷰 참조
+            // 1-4. 보드 뷰 참조
             this.boardView = new BoardView(pnlBoard, gameManager);
             this.boardView.MyPlayerType = assignedPlayerType; // 1p 2p 헷갈려서 넣음
             InitCanvasBoardEvents();
 
-            // 프레임 연산 구동용 메인 루프 타이머 가동
+            // 1-5. 프레임 연산 구동용 메인 루프 타이머 가동
             gameLoopTimer = new System.Windows.Forms.Timer();
             gameLoopTimer.Interval = 20;
             gameLoopTimer.Tick += GameLoopTimer_Tick;
             gameLoopTimer.Start();
 
-            // 배틀 매니저
+            // 1-6. 배틀 매니저
             this.battleManager = new BattleManager(gameManager);
             this.battleManager.OnTurnChanged += BattleManager_OnTurnChanged;
             this.gameManager.OnTurnEndRequired += () => { battleManager.RequestTurnEnd(); };
 
 
-            //뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 불러와서 메모리 릭 차단!
+            // 1-7. 뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 로드
             string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
             if (File.Exists(cardBackPath)) imgCardBack = Image.FromFile(cardBackPath);
 
@@ -177,6 +202,7 @@ namespace CardChess
             _ = this.battleManager.ProcessNextPhase();
         }
 
+        // 2. 턴 체인지
         private void BattleManager_OnTurnChanged(PlayerType currentTurn)
         {
             // 이벤트 수신 시 버튼 비주얼 직접 변경 (1P면 1, 2P면 2)
@@ -200,6 +226,7 @@ namespace CardChess
             RefreshBoard();
         }
 
+        // 3. 보드 내 이벤트 핸들러
         private void InitCanvasBoardEvents()
         {
             pnlBoard.Controls.Clear();
@@ -228,6 +255,7 @@ namespace CardChess
             boardView.SyncPiecesWithBackend();
         }
 
+        // 4. 체크
         private void PnlBoard_Paint(object sender, PaintEventArgs e)
         {
             boardView.DrawBoard(e.Graphics);
@@ -310,11 +338,15 @@ namespace CardChess
                 if (clickedPiece != null && boardView.PieceAnimations.ContainsKey(clickedPiece))
                 {
                     boardView.PieceAnimations[clickedPiece].Onclick();
+                    if (clickedPiece.Owner == inputController.MyPlayerType)
+                    {
+                        SoundsManager.Play("Piece_select"); // 여기서 플레이어의 기물 클릭 사운드 재생
+                    }
                 }
 
                 inputController.OnBoardClicked(position);
                 boardView.HandleMovementAnimation();
-
+                SoundsManager.Play("Piece_attack"); // 공격 사운드
                 UpdateBoardHighlights(position);
 
                 // 체크 표시 포함해서 보드 강제 갱신
@@ -546,10 +578,10 @@ namespace CardChess
                 Top = 5,
                 BackColor = Color.Transparent,
                 FlatAppearance = { BorderSize = 0, MouseOverBackColor = Color.Transparent, MouseDownBackColor = Color.Transparent },
-                ForeColor = Color.White,
                 Font = new Font("맑은 고딕", 12, FontStyle.Bold),
                 Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
-                Enabled = false
+                ForeColor = Color.White,
+                Enabled = true
             };
             if (imgCardBack != null)
             {
@@ -703,7 +735,9 @@ namespace CardChess
                 if (!string.IsNullOrEmpty(networkMoveMessage))
                 {
                     if (networkMoveSuccess)
+                    {
                         AddLog($"[네트워크] {networkMoveMessage}");
+                    }
                     else
                         AddLog($"[네트워크 실패] {networkMoveMessage}");
                 }
@@ -740,7 +774,14 @@ namespace CardChess
                     if (!string.IsNullOrEmpty(networkCardMessage))
                     {
                         if (networkCardSuccess)
+                        {
                             AddLog($"[네트워크] {networkCardMessage}");
+                            SoundsManager.Play("Piece_attack"); // 상대방 공격 사운드
+                            if (cardName == "시간 왜곡")
+                            {
+                                boardView.TriggerClockEffect();
+                            }
+                        }
                         else
                             AddLog($"[네트워크 카드 실패] {networkCardMessage}");
                     }

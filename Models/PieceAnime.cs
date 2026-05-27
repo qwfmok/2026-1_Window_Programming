@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using System.Timers;
 
 // !!설명서는 주석 참조!!
-// 수정하시거나 젬민이한테 돌리거나 발표, 보고서 등 자료에 쓰실 때 참고하시면 됨
+// ㅇㅇㅇㅇ 수정하거나 발표, 보고서 등 자료에 쓰실 때 참고 ㅇㅇㅇㅇ
 
 namespace CardChess.Models
 {
@@ -35,12 +35,22 @@ namespace CardChess.Models
         protected float Idletime = 0; // 대기 자세 에셋 스왑용
         protected float Idleinterval = 770f; // 대기 자세 에셋 스왑 간격
 
+        private static Image[] effectFramesCache = null;
+
+        // --- 글로벌 이펙트(특히 추가턴주는 카드 관련) 변수부 ---
+        protected bool isEffectPlaying = false;
+        protected float effectProgress = 0f;
+        protected float effectDuration = 250f;
+        protected Size effectSize = new Size(96, 96);
+
         public PieceStatement State { get; protected set; } = PieceStatement.Idle1; // 여기서 스테이트먼트 시작 (보통 idle 1 상태)
 
         protected Image Frame1;
         protected Image Frame2; // 대기자세 2종
         protected Image Frameattack; // 공격자세 1종 (클릭 시)
         protected Image Framedeath; // 처치자세 1종 (잡힐 시)
+        public IPiece AssociatedBackendPiece { get; set; } = null;
+        protected static Image chainEffectImage;
 
         public Rectangle PieceBounds => new Rectangle((int)X, (int)(Y + Shakeoffset), Size, Size); // 쉽게 말하면 기물 히트박스
 
@@ -66,7 +76,29 @@ namespace CardChess.Models
                 Framedeath = Image.FromFile(System.IO.Path.Combine(Assetpath, $"{Owner}_{PieceType}_num_4.png"));
                 // 각 프레임에 맞는 이미지 출력하는 함수
                 // 에셋을 넣을 때는 대기상태는 1,2 공격 자세를 3, 사망 연출을 4로 넣으면 ㅇㅋ
-                // 오너 타입은 Player1 또는 Player2로 하고, 피스타입은 Bishop이나 Knight 등등 원하는 기물, 이후 _num_(..) 로 간단하게 필요한 에셋 넣으면 적용됨다
+                // 오너 타입은 Player1 또는 Player2로 하고, 피스타입은 Bishop이나 Knight 등등 원하는 기물, 이후 _num_(..) 로 간단하게 필요한 에셋 넣으면 적용됨
+                if (effectFramesCache == null)
+                {
+                    effectFramesCache = new Image[4];
+                    for (int i = 0; i < 4; i++)
+                    {
+                        // 경로 추적해서 dust_ 이후 4개의 파일에 붙은 번호를 i를 늘려가면서 판단
+                        string effectPath = System.IO.Path.Combine(Assetpath, $"effect_dust_{i + 1}.png");
+                        if (System.IO.File.Exists(effectPath))
+                        {
+                            effectFramesCache[i] = Image.FromFile(effectPath);
+                        }
+                    }
+                }
+                if (chainEffectImage == null)
+                {
+                    string ChainAsset = System.IO.Path.Combine(System.Windows.Forms.Application.StartupPath, "Assets");
+                    string chainPath = System.IO.Path.Combine(ChainAsset, "effect_zhonya.png"); // 존야 쓰면 나오는 쇠사슬 이펙트
+                    if (System.IO.File.Exists(chainPath))
+                    {
+                        chainEffectImage = Image.FromFile(chainPath);
+                    }
+                }
             }
             catch
             {
@@ -108,6 +140,16 @@ namespace CardChess.Models
         // 애니메이션 구현
         public void Animating(float Timetodie)
         {
+            if (isEffectPlaying)
+            {
+                effectProgress += (Timetodie / effectDuration); // 매 프레임 흐른 시간을 반영
+                if (effectProgress >= 1.0f)
+                {
+                    effectProgress = 1.0f;
+                    isEffectPlaying = false; // 4번 프레임까지 다 지나가면 재생 종료
+                }
+            }
+
             switch (State) // 각 상태는 switch case로 나눔
             {
                 case PieceStatement.Idle1:
@@ -130,6 +172,8 @@ namespace CardChess.Models
                         Y = TargetY;
                         Shakestep = 0;
                         State = PieceStatement.Shaking;
+                        isEffectPlaying = true;
+                        effectProgress = 0f;
                     }
                     else
                     {
@@ -212,6 +256,27 @@ namespace CardChess.Models
             {
                 g.DrawImage(Currentimage, PieceBounds);
             }
+
+            if (isEffectPlaying && effectFramesCache != null)
+            {
+                int frameIndex = (int)(effectProgress * 4);
+                if (frameIndex > 3) frameIndex = 3;
+
+                if (effectFramesCache[frameIndex] != null)
+                {
+                    // 기물 발밑 정중앙에 이펙트가 걸치도록 좌표 계산
+                    float effectX = X + (Size / 2f) - (effectSize.Width / 2f);
+                    float effectY = Y + Size - (effectSize.Height / 2f);
+
+                    g.DrawImage(effectFramesCache[frameIndex], effectX, effectY, effectSize.Width, effectSize.Height);
+                }
+            }
+
+            if (AssociatedBackendPiece != null && AssociatedBackendPiece.IsFrozen && chainEffectImage != null) // 존야 상태인지 인식
+            {
+                // 체인 이미지 덮어써서 그려주는 추가 기능
+                g.DrawImage(chainEffectImage, PieceBounds);
+            }
         }
 
         // 이미지 매칭용 함수
@@ -237,20 +302,5 @@ namespace CardChess.Models
                     return Frame1; // 기본값은 그냥 대기자세
             }
         }
-
-
-        //변수선언
-        //클래스로 묶어야함: 기물 공통 애니메이션
-        //정지1,2, 공격(마우스로 클릭했을 때), 죽음 처리
-
-        //이동은 변수 여러개 생성해서 쿵 찍기 + 간단한 흔들림 효과
-        //죽음은 밝기 1.0주고 0.33씩 감소
-
-        //사운드는 wav파일? -> mp3부터는 외부 라이브러리 참조가 필요해서 그냥 wav로 해결
-        //그래픽은 도트 4종
-        //파일명 정의는
-        //string imageFileName = $"{piece.Owner}_{piece.Type}_num_{statement}.png";
-
-        //그 외 이펙트 생각해 볼 것
     }
 }
