@@ -65,6 +65,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Input\InputController.cs" />
+    <Compile Include="Menu\SoundsManager.cs" />
     <Compile Include="Menu\Surrender.cs" />
     <Compile Include="Models\CardType.cs" />
     <Compile Include="Models\GameState.cs" />

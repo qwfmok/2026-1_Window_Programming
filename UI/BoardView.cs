@@ -1,12 +1,13 @@
-﻿using System;
+﻿using CardChess.Core;
+using CardChess.Models;
+using CardChess.Pieces;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using CardChess.Core;
-using CardChess.Models;
-using CardChess.Pieces;
 
 // 보드의 실제 출력은 여기서 구현
 
@@ -14,15 +15,23 @@ namespace CardChess.View
 {
     public class BoardView
     {
-        private Panel pnlBoard; // 윈도우 폼 컨트롤 중 패널보드 기반
+        // --- 보드 구현용 변수부 선언 ---
+        private Panel pnlBoard;
         private GameManager gameManager;
         public float XOffset { get; private set; }
         public float YOffset { get; private set; }
         public float CellWidth { get; private set; }
         public float CellHeight { get; private set; }
+        // --- 이미지 ---
+        private Image boardImage = null;
+        private Image boardBgImage = null;
 
-        private Image boardImage = null;   // 보드 이미지
-        private Image boardBgImage = null; // 보드 프레임 이미지
+        // --- 글로벌 이펙트용 변수부 선언 ---
+        private static Image clockEffectImage = null;
+        private bool isClockEffectPlaying = false;
+        private float clockEffectTimer = 0f;
+        private const float clockEffectDuration = 1200f;
+        private Image wallEffectImage = null;
 
         private Dictionary<IPiece, PieceAnime> pieceAnimations = new Dictionary<IPiece, PieceAnime>();
 
@@ -62,6 +71,10 @@ namespace CardChess.View
             if (File.Exists(framePath)) boardBgImage = Image.FromFile(framePath);
             string boardPath = Path.Combine(Application.StartupPath, "Assets", "board.png"); // 이건 보드 로딩
             if (File.Exists(boardPath)) boardImage = Image.FromFile(boardPath);
+            string clockPath = Path.Combine(Application.StartupPath, "Assets", "effect_clock.png"); // 이건 글로벌 이펙트
+            if (File.Exists(clockPath)) clockEffectImage = Image.FromFile(clockPath);
+            string wallPath = Path.Combine(Application.StartupPath, "Assets", "effect_wall.png"); // 이건 방벽 이펙트
+            if (File.Exists(wallPath)) wallEffectImage = Image.FromFile(wallPath);
             // 파일 경로는 둘 다 바이너리/디버그 안에 Assets 폴더임
 
             typeof(Panel).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -155,10 +168,18 @@ namespace CardChess.View
                             float x = XOffset + logicalCol * CellWidth;
                             float y = YOffset + logicalRow * CellHeight;
 
-                            // 반투명한 얼음색(하늘색)으로 타일 채우기 (Alpha 120)
-                            using (SolidBrush iceBrush = new SolidBrush(Color.FromArgb(120, 135, 206, 235)))
+                            // 방벽 png 메모리 올려놓은 거 드로잉해주는 조건문
+                            if (wallEffectImage != null)
                             {
-                                g.FillRectangle(iceBrush, x, y, CellWidth, CellHeight);
+                                g.DrawImage(wallEffectImage, x, y, CellWidth, CellHeight);
+                            }
+                            else
+                            {
+                                // 이미지가 없으면 기존처럼 하늘색 네모 그대로 나와용
+                                using (SolidBrush iceBrush = new SolidBrush(Color.FromArgb(120, 135, 206, 235)))
+                                {
+                                    g.FillRectangle(iceBrush, x, y, CellWidth, CellHeight);
+                                }
                             }
 
                             // 남은 턴 수를 텍스트로 표시 (가운데 정렬)
@@ -228,6 +249,31 @@ namespace CardChess.View
             {
                 anime.Onpainting(g);
             }
+
+            if (isClockEffectPlaying && clockEffectImage != null)
+            {
+                // 사인 함수(Sin)를 써서 투명도가 0 -> 최대치 -> 0으로 부드럽게 감쇠하도록 만듦
+                float progress = clockEffectTimer / clockEffectDuration;
+                float alpha = (float)Math.Sin(progress * Math.PI) * 0.7f; // 최대 투명도를 70%로 제한해서 밑의 보드가 살짝 보이게 튜닝
+
+                using (var attribs = new ImageAttributes())
+                {
+                    var matrix = new ColorMatrix { Matrix33 = alpha };
+                    attribs.SetColorMatrix(matrix);
+
+                    float boardWidth = CellWidth * BoardManager.MAX_COL;
+                    float boardHeight = CellHeight * BoardManager.MAX_ROW;
+
+                    // 딱 체스 보드판 그리드 영역 크기만큼 상단에 덮어씌움
+                    g.DrawImage(
+                        clockEffectImage,
+                        new Rectangle((int)XOffset, (int)YOffset, (int)boardWidth, (int)boardHeight),
+                        0, 0, clockEffectImage.Width, clockEffectImage.Height,
+                        GraphicsUnit.Pixel,
+                        attribs
+                    );
+                }
+            }
         }
 
         public void UpdateLoopTick()
@@ -237,6 +283,15 @@ namespace CardChess.View
             foreach (var anime in pieceAnimations.Values)
             {
                 anime.Animating(20f);
+            }
+
+            if (isClockEffectPlaying)
+            {
+                clockEffectTimer += 20f;
+                if (clockEffectTimer >= clockEffectDuration)
+                {
+                    isClockEffectPlaying = false;
+                }
             }
         }
 
@@ -302,6 +357,8 @@ namespace CardChess.View
                         float startX = XOffset + vCol * CellWidth + (CellWidth - 70f) / 2f;
                         float startY = YOffset + vRow * CellHeight + (CellHeight - 70f) / 2f;
                         PieceAnime anime = new ConcretePieceAnime(piece.Owner.ToString(), piece.Type.ToString(), startX, startY);
+
+                        anime.AssociatedBackendPiece = piece;
                         pieceAnimations.Add(piece, anime);
                     }
                 }
@@ -334,6 +391,12 @@ namespace CardChess.View
                     }
                 }
             }
+        }
+        // 외부 호출용 함수
+        public void TriggerClockEffect()
+        {
+            isClockEffectPlaying = true;
+            clockEffectTimer = 0f;
         }
         private class ConcretePieceAnime : PieceAnime
         {
