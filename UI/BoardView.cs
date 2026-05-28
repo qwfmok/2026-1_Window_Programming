@@ -151,9 +151,9 @@ namespace CardChess.View
                             int vRow = GetVisualRow(logicalRow);
                             int vCol = GetVisualCol(logicalCol);
 
-                            // 타일의 실제 X, Y 좌표 계산
-                            float x = XOffset + logicalCol * CellWidth;
-                            float y = YOffset + logicalRow * CellHeight;
+                            // 타일의 실제 X Y 좌표 계산
+                            float x = XOffset + vCol * CellWidth;
+                            float y = YOffset + vRow * CellHeight;
 
                             // 반투명한 얼음색(하늘색)으로 타일 채우기 (Alpha 120)
                             using (SolidBrush iceBrush = new SolidBrush(Color.FromArgb(120, 135, 206, 235)))
