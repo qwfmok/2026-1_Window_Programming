@@ -49,7 +49,7 @@ namespace CardChess.Cards
         {
             if (Name == "랜덤 방어")
             {
-                MainForm.Instance.AddLog($"[함정 발동]! 함정이 작동합니다!");
+                MainForm.Instance.AddLog($"[함정 발동] '랜덤 방어' 함정이 작동합니다!");
 
                 // 50% 확률 (0: 앞면/반사성공, 1: 뒷면/불발)
                 if (state.SharedRandom.Next(0, 2) == 0)

@@ -27,24 +27,24 @@ namespace CardChess.Core
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    deckList.Add(new EvolutionCard("기사 변신", "폰을 나이트로 진화", PieceType.Knight));
-                    deckList.Add(new EvolutionCard("룩 변신", "폰을 룩으로 진화", PieceType.Rook));
-                    deckList.Add(new EvolutionCard("비숍 변신", "폰을 비숍으로 진화", PieceType.Bishop));
+                    deckList.Add(new EvolutionCard("기사 진화", "폰을 나이트로 진화", PieceType.Knight));
+                    deckList.Add(new EvolutionCard("룩 진화", "폰을 룩으로 진화", PieceType.Rook));
+                    deckList.Add(new EvolutionCard("비숍 진화", "폰을 비숍으로 진화", PieceType.Bishop));
                 }
 
                 deckList.Add(new FieldSkillCard("방벽 건설", "지정한 빈칸에 2턴간 유지되는 벽 생성"));
                 deckList.Add(new FieldSkillCard("증원", "지정한 빈칸에 내 폰을 1기 소환"));
-                deckList.Add(new ActiveSkillCard("카드 뽑기", "덱에서 카드를 2장 뽑습니다."));
-                deckList.Add(new ActiveSkillCard("패 교환", "모두 손패를 버리고 다시 뽑습니다."));
-                deckList.Add(new ActiveSkillCard("카드 강탈", "상대의 손패 1장을 빼앗아옵니다."));
+                deckList.Add(new ActiveSkillCard("두장 뽑기", "덱에서 카드를 2장 뽑습니다."));
+                deckList.Add(new ActiveSkillCard("손패 교환", "모두 손패를 버리고 다시 뽑습니다."));
+                deckList.Add(new ActiveSkillCard("카드 뺏기", "상대의 손패 1장을 빼앗아옵니다."));
                 deckList.Add(new ActiveSkillCard("시간 왜곡", "상대의 다음 턴을 스킵합니다."));
-                deckList.Add(new ActiveSkillCard("랜덤 실행", "덱에서 카드 2장을 무작위로 즉시 시전"));
-                deckList.Add(new TargetSkillCard("소생", "내 진영의 빈칸에 내 기물 부활"));
-                deckList.Add(new TargetSkillCard("기물 강탈", "상대 기물 1개의 소유권 강탈"));
+                deckList.Add(new ActiveSkillCard("랜덤 시전", "덱에서 카드 2장을 무작위로 즉시 시전"));
+                deckList.Add(new TargetSkillCard("부활", "내 진영의 빈칸에 내 기물 부활"));
+                deckList.Add(new TargetSkillCard("기물 뺏기", "상대 기물 1개의 소유권 강탈"));
                 deckList.Add(new TargetSkillCard("위치 교환", "내 무작위 기물과 위치 교환"));
                 deckList.Add(new TargetSkillCard("봉인", "1턴 동안 무적 및 행동 불가"));
                 deckList.Add(new TargetSkillCard("복제", "인접한 빈칸 중 1곳에 기물 복제"));
-                deckList.Add(new TargetSkillCard("랜덤 변신", "무작위 기물로 변이 (킹 제외)"));
+                deckList.Add(new TargetSkillCard("랜덤 진화", "무작위 기물로 변이 (킹 제외)"));
                 deckList.Add(new TrapCard("랜덤 방어", "50% 확률로 공격 반사 및 파괴"));
             }
 

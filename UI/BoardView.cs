@@ -164,9 +164,9 @@ namespace CardChess.View
                             int vRow = GetVisualRow(logicalRow);
                             int vCol = GetVisualCol(logicalCol);
 
-                            // 타일의 실제 X, Y 좌표 계산
-                            float x = XOffset + logicalCol * CellWidth;
-                            float y = YOffset + logicalRow * CellHeight;
+                            // 타일의 실제 X Y 좌표 계산
+                            float x = XOffset + vCol * CellWidth;
+                            float y = YOffset + vRow * CellHeight;
 
                             // 방벽 png 메모리 올려놓은 거 드로잉해주는 조건문
                             if (wallEffectImage != null)

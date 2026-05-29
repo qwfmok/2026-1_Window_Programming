@@ -20,6 +20,7 @@ namespace CardChess
         private Image imgRoomCreate;
         private Image imgRoomJoin;
         private Image imgGameStart;
+        private Image imgManual;
         private Image imgCredit;
         private Image imgExit;
 
@@ -43,7 +44,7 @@ namespace CardChess
             LoadGameAssets();
             InitLobbyUI();
         }
-
+        
         // 간단하게 로드 게임 에셋으로 시작
 
         private void LoadGameAssets()
@@ -54,7 +55,7 @@ namespace CardChess
 
                 backgroundBg = Image.FromFile(Path.Combine(assetsPath, "bg.png")); // 라서 이렇게 파일명만 맞춰주면
                 Barimg = Image.FromFile(Path.Combine(assetsPath, "bar.png")); // 위에처럼 배경도 불러오고 텍스트에 테두리도 칠해주고
-
+                imgManual = Image.FromFile(Path.Combine(assetsPath, "button_manual.png")); // 설명서 버튼 이미지 불러오기
                 imgRoomCreate = Image.FromFile(Path.Combine(assetsPath, "button_roomcreate.png")); // 방만들기 버튼도 있으면 그것도 넣어주고
                 imgRoomJoin = Image.FromFile(Path.Combine(assetsPath, "button_join.png")); // 들어가는 버튼도 넣어주고
                 imgGameStart = Image.FromFile(Path.Combine(assetsPath, "button_gamestart.png")); // 시작 버튼도 넣어주고
@@ -112,6 +113,17 @@ namespace CardChess
             if (imgGameStart != null) // 게임 시작
             {
                 rects["Start"] = new Rectangle(currentX, buttonY, imgGameStart.Width, imgGameStart.Height);
+                // [핵심] 메뉴얼 버튼은 가로 스크롤(currentX) 로직 밖으로 빼서 독립적으로 계산합니다!
+                if (imgManual != null)
+                {
+                    // 게임 시작 버튼의 정중앙 좌표를 기준으로 매뉴얼 버튼 X좌표 설정
+                    int manualX = currentX + (imgGameStart.Width / 2) - (imgManual.Width / 2);
+
+                    // 게임 시작 버튼 Y좌표에서 위로 20픽셀만큼 띄워서 배치
+                    int manualY = buttonY - imgManual.Height - 20;
+
+                    rects["Manual"] = new Rectangle(manualX, manualY, imgManual.Width, imgManual.Height);
+                }
                 currentX += imgGameStart.Width + gap;
             }
             if (imgCredit != null) // 크레딧
@@ -144,6 +156,7 @@ namespace CardChess
             if (imgGameStart != null && rects.ContainsKey("Start")) e.Graphics.DrawImage(imgGameStart, rects["Start"]);
             if (imgCredit != null && rects.ContainsKey("Credit")) e.Graphics.DrawImage(imgCredit, rects["Credit"]);
             if (imgExit != null && rects.ContainsKey("Exit")) e.Graphics.DrawImage(imgExit, rects["Exit"]);
+            if (imgManual != null && rects.ContainsKey("Manual")) e.Graphics.DrawImage(imgManual, rects["Manual"]);
         }
 
         // 각 버튼 마우스 클릭 상속받는거
@@ -186,9 +199,28 @@ namespace CardChess
                 HandleExit();
                 return;
             }
+            // 메뉴얼 버튼
+            if (rects.ContainsKey("Manual") && rects["Manual"].Contains(mousePos))
+            {
+                HandleManual();
+                return;
+            }
         }
 
         // 버튼 기능 처리 로직
+        // 설명서 메인 허브 창 열기
+        private void HandleManual()
+        {
+            this.Hide();
+
+            using (MainManual manualForm = new MainManual())
+            {
+                manualForm.ShowDialog();
+            }
+
+            this.Show();
+            this.Invalidate();
+        }
 
         private void HandleRoomCreate() // 방 만드는 핸들러
         {

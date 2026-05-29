@@ -29,7 +29,7 @@ namespace CardChess.Cards
 
             switch (Name)
             {
-                case "소생":
+                case "부활":
                     // 반드시 기물이 없는 '빈칸'이어야 함
                     if (piece != null) return false;
 
@@ -45,7 +45,7 @@ namespace CardChess.Cards
                         // 2P 턴일 때는 찍은 칸의 Row가 0~3 사이일 때만 true 반환
                         return targetPos.Row >= 0 && targetPos.Row <= 3;
                     }
-                case "기물 강탈":
+                case "기물 뺏기":
                     // 기본 검증: 찍은 칸에 기물이 있어야 하고, 내 기물이 아니어야 함 (상대 기물 타겟 필수)
                     if (piece == null || piece.Owner == myPlayer)
                     {
@@ -92,7 +92,7 @@ namespace CardChess.Cards
                     return GetAdjacentEmptyPositions(targetPos, state).Count > 0;
 
                 // '내 기물'이지만 '킹은 제외'해야 하는 스킬
-                case "랜덤 변신":
+                case "랜덤 진화":
                     // 판도라로 내 킹을 변이시키면 게임이 터지므로 킹은 제외!
                     return piece != null && piece.Owner == myPlayer && piece.Type != PieceType.King;
 
@@ -107,7 +107,7 @@ namespace CardChess.Cards
             PlayerType myPlayer = state.CurrentTurn;
             Random rand = state.SharedRandom;
 
-            if (Name != "소생" && targetPiece == null)
+            if (Name != "부활" && targetPiece == null)
             {
                 MainForm.Instance.AddLog($"[{Name}] 타겟 기물이 존재하지 않아 스킬이 허공에 빗나갔습니다!");
                 return;
@@ -125,7 +125,7 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 봉인되었습니다. 무적 및 행동 불가 상태입니다.");
                     break;
 
-                case "기물 강탈":
+                case "기물 뺏기":
                     targetPiece.Owner = myPlayer;
                     MainForm.Instance.AddLog($"[{Name}] 상대 기물의 소유권을 내 것으로 만들었습니다!");
                     break;
@@ -167,7 +167,7 @@ namespace CardChess.Cards
                     }
                     break;
 
-                case "랜덤 변신":
+                case "랜덤 진화":
                     // 현재 기물을 파괴하고 랜덤한 새 기물로 변경 (킹 제외)
                     PieceType[] pandoraTypes = { PieceType.Pawn, PieceType.Knight, PieceType.Bishop, PieceType.Rook, PieceType.Queen };
                     PieceType newType = pandoraTypes[rand.Next(pandoraTypes.Length)];
@@ -177,7 +177,7 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog($"[{Name}] 판도라의 상자가 열려 {newType} 기물로 변이했습니다!");
                     break;
 
-                case "소생":
+                case "부활":
                     // 내 무덤 리스트 가져오기
                     var myGraveyard = (myPlayer == PlayerType.Player1) ? state.Player1DeadPieces : state.Player2DeadPieces;
 

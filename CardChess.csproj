@@ -46,6 +46,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CardManual.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CardManual.Designer.cs">
+      <DependentUpon>CardManual.cs</DependentUpon>
+    </Compile>
     <Compile Include="Cards\EvolutionCard.cs" />
     <Compile Include="Cards\FieldSkillCard.cs" />
     <Compile Include="Cards\ICard.cs" />
@@ -64,7 +70,19 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="GameManual.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GameManual.Designer.cs">
+      <DependentUpon>GameManual.cs</DependentUpon>
+    </Compile>
     <Compile Include="Input\InputController.cs" />
+    <Compile Include="MainManual.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainManual.Designer.cs">
+      <DependentUpon>MainManual.cs</DependentUpon>
+    </Compile>
     <Compile Include="Menu\SoundsManager.cs" />
     <Compile Include="Menu\Surrender.cs" />
     <Compile Include="Models\CardType.cs" />
@@ -74,6 +92,12 @@
     <Compile Include="Models\PieceType.cs" />
     <Compile Include="Models\PlayerType.cs" />
     <Compile Include="Models\Position.cs" />
+    <Compile Include="PieceManual.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PieceManual.Designer.cs">
+      <DependentUpon>PieceManual.cs</DependentUpon>
+    </Compile>
     <Compile Include="Pieces\Bishop.cs" />
     <Compile Include="Pieces\BishopAnimation.cs" />
     <Compile Include="Pieces\IPiece.cs" />
@@ -94,8 +118,20 @@
     <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <EmbeddedResource Include="CardManual.resx">
+      <DependentUpon>CardManual.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GameManual.resx">
+      <DependentUpon>GameManual.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MainManual.resx">
+      <DependentUpon>MainManual.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PieceManual.resx">
+      <DependentUpon>PieceManual.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
