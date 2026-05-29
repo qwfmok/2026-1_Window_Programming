@@ -1,6 +1,7 @@
 ﻿using CardChess.Cards;
 using CardChess.Core;
 using CardChess.Input;
+using CardChess.Menu;
 using CardChess.Models;
 using CardChess.Pieces;
 using CardChess.View;
@@ -50,23 +51,23 @@ namespace CardChess
         // --- 카드 텍스트 인식시키는 변수부 ---
         private readonly Dictionary<string, string> cardImageMap = new Dictionary<string, string>
         {
-            { "기사 서품", "card_1_knightevo" },
-            { "골렘 연성", "card_1_rookevo" },
-            { "사제 서품", "card_1_bishopevo" },
-            { "욕망의 항아리", "card_1_bottle" },
-            { "생각의 압수", "card_1_handdeath" },
-            { "완벽한 약탈", "card_1_thief" },
+            { "기사 변신", "card_1_knightevo" },
+            { "룩 변신", "card_1_rookevo" },
+            { "비숍 변신", "card_1_bishopevo" },
+            { "카드 뽑기", "card_1_bottle" },
+            { "패 교환", "card_1_handdeath" },
+            { "카드 강탈", "card_1_thief" },
             { "시간 왜곡", "card_1_timewalk" },
-            { "도둑들의 경매", "card_1_auction" },
+            { "랜덤 실행", "card_1_auction" },
             { "방벽 건설", "card_1_wallconst" },
             { "증원", "card_1_reinforce" },
-            { "존야의 시계", "card_1_zhonya" },
-            { "시프트 체인지", "card_1_change" },
-            { "죽은 자의 소생", "card_1_revive" },
-            { "판도라", "card_1_pandora" },
-            { "마인드 컨트롤", "card_1_mindcontrol" },
-            { "그림자분신술", "card_1_kagebunshin" },
-            { "갬블 게임", "card_1_gamble" }
+            { "봉인", "card_1_zhonya" },
+            { "위치 교환", "card_1_change" },
+            { "소생", "card_1_revive" },
+            { "랜덤 변신", "card_1_pandora" },
+            { "기물 강탈", "card_1_mindcontrol" },
+            { "복제", "card_1_kagebunshin" },
+            { "랜덤 방어", "card_1_gamble" }
 
             // 이후 신규 카드를 추가할 때는 { "스킬 이름", "파일 이름(확장자 불필요)" }, 로 개행하면 됨 + 마지막 행은 ,를 붙이지 않는다
         };
@@ -78,11 +79,25 @@ namespace CardChess
         // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
         public static MainForm Instance;
 
-        // 진입점
-
+        // 1. 생성자 진입점
         public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType, int seed)
         {
             InitializeComponent();
+
+            SoundsManager.LoadALLSounds(); // 사운드의 클래스 소스파일 참조
+            CardChess.Menu.SoundsManager.PlayBGM("bg_music");
+
+            // --- 화면 버퍼 제거부 ---
+            Action<Control> enableDoubleBuffer = (control) =>
+            {
+                typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                               ?.SetValue(control, true);
+            };
+
+            enableDoubleBuffer(pnlPlayerHand);
+            enableDoubleBuffer(pnlOpponentHand);
+            enableDoubleBuffer(pnlPlayArea);
+            // --- 화면 버퍼 제거부 ---
 
             this.Width = 1600;
             this.Height = 900; // MainForm(이하 메인폼)의 최초 크기 정의
@@ -91,6 +106,7 @@ namespace CardChess
             // 폼이 생성될 때 자기 자신을 Instance 변수에 등록
             Instance = this;
 
+            // 1-1. 백그라운드 이미지
             // 메인폼 배경 이미지 설정 경로는 동일하게 바이너리/디버그의 에셋 폴더
             string bgPath = Path.Combine(Application.StartupPath, "Assets", "bg.png");
             if (File.Exists(bgPath))
@@ -108,14 +124,14 @@ namespace CardChess
             CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
             RelayoutUI();
 
-            // 턴 나타내는 버튼
+            // 1-2. 턴 나타내는 버튼
             string imgPath = Path.Combine(Application.StartupPath, "Assets", "button_long_player_state.png");
             if (File.Exists(imgPath))
             {
                 playerStateImg = Image.FromFile(imgPath);
             }
 
-            // 네트워크 끌고 들어온 흔적
+            // 1-3. Form1에서 실행된 UDP프로토콜 네트워크를 MainForm까지 유지
             this.udpProtocol = connectedUdp;
             if (this.udpProtocol != null)
             {
@@ -130,27 +146,36 @@ namespace CardChess
             {
                 if (udpProtocol != null && udpProtocol.IsConnected)
                     udpProtocol.Send(msg);
+                
+                if (msg.StartsWith("CARD")) // 글로벌 이펙트이므로 로그가 출력될 때 나오는 것이 낫다고 생각
+                {
+                    string[] p = msg.Split(',');
+                    if (p.Length > 1 && p[1] == "시간 왜곡")
+                    {
+                        boardView.TriggerClockEffect(); // 보드뷰에서 호출해오는걸로 구현했음
+                    }
+                }
             };
             this.inputController.OnLogMessage += (sender, msg) => { AddLog(msg); };
 
-            // 보드 뷰 참조
+            // 1-4. 보드 뷰 참조
             this.boardView = new BoardView(pnlBoard, gameManager);
             this.boardView.MyPlayerType = assignedPlayerType; // 1p 2p 헷갈려서 넣음
             InitCanvasBoardEvents();
 
-            // 프레임 연산 구동용 메인 루프 타이머 가동
+            // 1-5. 프레임 연산 구동용 메인 루프 타이머 가동
             gameLoopTimer = new System.Windows.Forms.Timer();
             gameLoopTimer.Interval = 20;
             gameLoopTimer.Tick += GameLoopTimer_Tick;
             gameLoopTimer.Start();
 
-            // 배틀 매니저
+            // 1-6. 배틀 매니저
             this.battleManager = new BattleManager(gameManager);
             this.battleManager.OnTurnChanged += BattleManager_OnTurnChanged;
             this.gameManager.OnTurnEndRequired += () => { battleManager.RequestTurnEnd(); };
 
 
-            //뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 불러와서 메모리 릭 차단!
+            // 1-7. 뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 로드
             string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
             if (File.Exists(cardBackPath)) imgCardBack = Image.FromFile(cardBackPath);
 
@@ -177,6 +202,7 @@ namespace CardChess
             _ = this.battleManager.ProcessNextPhase();
         }
 
+        // 2. 턴 체인지
         private void BattleManager_OnTurnChanged(PlayerType currentTurn)
         {
             // 이벤트 수신 시 버튼 비주얼 직접 변경 (1P면 1, 2P면 2)
@@ -200,6 +226,7 @@ namespace CardChess
             RefreshBoard();
         }
 
+        // 3. 보드 내 이벤트 핸들러
         private void InitCanvasBoardEvents()
         {
             pnlBoard.Controls.Clear();
@@ -228,6 +255,7 @@ namespace CardChess
             boardView.SyncPiecesWithBackend();
         }
 
+        // 4. 체크
         private void PnlBoard_Paint(object sender, PaintEventArgs e)
         {
             boardView.DrawBoard(e.Graphics);
@@ -310,16 +338,21 @@ namespace CardChess
                 if (clickedPiece != null && boardView.PieceAnimations.ContainsKey(clickedPiece))
                 {
                     boardView.PieceAnimations[clickedPiece].Onclick();
+                    if (clickedPiece.Owner == inputController.MyPlayerType)
+                    {
+                        SoundsManager.Play("Piece_select"); // 여기서 플레이어의 기물 클릭 사운드 재생
+                    }
                 }
 
                 inputController.OnBoardClicked(position);
                 boardView.HandleMovementAnimation();
-
+                SoundsManager.Play("Piece_attack"); // 공격 사운드
                 UpdateBoardHighlights(position);
 
                 // 체크 표시 포함해서 보드 강제 갱신
                 RefreshBoard();
                 pnlBoard.Invalidate();
+                RefreshHand();
 
                 ShowGameEndMessageIfNeeded();
             }
@@ -545,10 +578,10 @@ namespace CardChess
                 Top = 5,
                 BackColor = Color.Transparent,
                 FlatAppearance = { BorderSize = 0, MouseOverBackColor = Color.Transparent, MouseDownBackColor = Color.Transparent },
-                ForeColor = Color.White,
                 Font = new Font("맑은 고딕", 12, FontStyle.Bold),
                 Text = $"공용 덱\n{gameManager.State.SharedDeck.Count}장",
-                Enabled = false
+                ForeColor = Color.White,
+                Enabled = true
             };
             if (imgCardBack != null)
             {
@@ -559,6 +592,7 @@ namespace CardChess
 
             // 5. Z-Index 정리 (설명창이 카드 뒤에 숨지 않게 앞으로 당김)
             pnlPlayerDeck.BringToFront();
+            HighlightSelectedCard();
         }
 
         private void CardButton_MouseDown(object sender, MouseEventArgs e)
@@ -701,7 +735,9 @@ namespace CardChess
                 if (!string.IsNullOrEmpty(networkMoveMessage))
                 {
                     if (networkMoveSuccess)
+                    {
                         AddLog($"[네트워크] {networkMoveMessage}");
+                    }
                     else
                         AddLog($"[네트워크 실패] {networkMoveMessage}");
                 }
@@ -738,7 +774,14 @@ namespace CardChess
                     if (!string.IsNullOrEmpty(networkCardMessage))
                     {
                         if (networkCardSuccess)
+                        {
                             AddLog($"[네트워크] {networkCardMessage}");
+                            SoundsManager.Play("Piece_attack"); // 상대방 공격 사운드
+                            if (cardName == "시간 왜곡")
+                            {
+                                boardView.TriggerClockEffect();
+                            }
+                        }
                         else
                             AddLog($"[네트워크 카드 실패] {networkCardMessage}");
                     }
@@ -1041,6 +1084,106 @@ namespace CardChess
                 return;
 
             ShowCardDescription(card);
+        }
+
+        // ====================================================================
+        // 단축키(키보드 1~8)로 손패 선택 및 ESC 취소 기능
+        // ====================================================================
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // 내 턴이 아니거나 조작 불가능한 상태면 키보드 입력 무시
+            if (!battleManager.IsPlayable || gameManager.CurrentTurn != inputController.MyPlayerType)
+                return base.ProcessCmdKey(ref msg, keyData);
+
+            int cardIndex = -1;
+
+            // 눌린 키가 1~8번(키패드 포함)인지 확인
+            switch (keyData)
+            {
+                case Keys.D1: case Keys.NumPad1: cardIndex = 0; break;
+                case Keys.D2: case Keys.NumPad2: cardIndex = 1; break;
+                case Keys.D3: case Keys.NumPad3: cardIndex = 2; break;
+                case Keys.D4: case Keys.NumPad4: cardIndex = 3; break;
+                case Keys.D5: case Keys.NumPad5: cardIndex = 4; break;
+                case Keys.D6: case Keys.NumPad6: cardIndex = 5; break;
+                case Keys.D7: case Keys.NumPad7: cardIndex = 6; break;
+                case Keys.D8: case Keys.NumPad8: cardIndex = 7; break;
+
+                // ESC 키를 누르면 선택 취소
+                case Keys.Escape:
+                    inputController.CancelSelection();
+                    AddLog("[키보드] 선택이 취소되었습니다.");
+                    HighlightSelectedCard();
+                    return true;
+            }
+
+            // 1~8번 키를 눌렀을 때
+            if (cardIndex >= 0)
+            {
+                PlayerType myType = inputController.MyPlayerType;
+
+                // 해당 번호의 카드가 내 손패에 존재할 경우에만 실행
+                if (gameManager.State.Hands.ContainsKey(myType) && gameManager.State.Hands[myType].Count > cardIndex)
+                {
+                    ICard cardToSelect = gameManager.State.Hands[myType][cardIndex];
+
+                    // 입력 컨트롤러에 '이 카드 선택했음' 알림 (마우스로 클릭한 것과 동일한 효과!)
+                    inputController.OnCardClicked(cardToSelect);
+
+                    // 선택한 카드의 설명을 좌측 설명창에 바로 띄워줌
+                    ShowCardDescription(cardToSelect);
+                    HighlightSelectedCard();
+
+                    // 스킬 종류에 따라 안내 로그 출력
+                    if (cardToSelect.Type == CardType.ActiveSkill || cardToSelect.Type == CardType.Trap)
+                        AddLog($"[키보드] '{cardToSelect.Name}' 선택됨. 체스판 아무 곳이나 클릭하면 발동됩니다!");
+                    else
+                        AddLog($"[키보드] '{cardToSelect.Name}' 선택됨. 스킬을 사용할 타겟(체스판)을 마우스로 클릭하세요!");
+
+                    return true; 
+                }
+            }
+
+            // 위에서 처리되지 않은 나머지 키보드 입력은 폼이 원래 하던 대로 처리하도록 넘김
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        // ====================================================================
+        // 선택된 카드 시각적 강조 (위로 15px 띄우고 황금색 테두리)
+        // ====================================================================
+        private void HighlightSelectedCard()
+        {
+            int cardHeight = 120, spacingY = 10, startY = 10;
+            PlayerType myType = inputController.MyPlayerType;
+
+            if (!gameManager.State.Hands.ContainsKey(myType)) return;
+            var myHand = gameManager.State.Hands[myType];
+
+            foreach (Control c in pnlPlayerHand.Controls)
+            {
+                if (c is Button btnCard && btnCard.Tag is ICard card)
+                {
+                    int index = myHand.IndexOf(card);
+                    if (index < 0) continue;
+
+                    int row = index / 4; // 몇 번째 줄인지 계산
+                    int baseTop = startY + (cardHeight + spacingY) * row; // 카드의 원래 Y좌표
+
+                    if (inputController.SelectedCard == card)
+                    {
+                        btnCard.Top = baseTop - 15;
+                        btnCard.BackColor = Color.Gold;
+                        btnCard.FlatAppearance.BorderColor = Color.OrangeRed;
+                    }
+                    else
+                    {
+                        // 선택되지 않은 카드: 원래 위치와 기본 색상으로 얌전하게 복구
+                        btnCard.Top = baseTop;
+                        btnCard.BackColor = Color.LightGoldenrodYellow;
+                        btnCard.FlatAppearance.BorderColor = Color.Black;
+                    }
+                }
+            }
         }
 
         private void ShowCardDescription(ICard card)

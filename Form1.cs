@@ -336,12 +336,12 @@ namespace CardChess
             this.Invalidate();
         }
 
-        private void HandleCredit() // 크레딧 핸들러 그냥 넣어봤다 아쉽잖아 ㄹㅇㅋㅋ
+        private void HandleCredit() // 크레딧 핸들러
         {
             MessageBox.Show("Game Created by 김재민, 박정우, 장현빈, 전경원\n2026 All Rights Reserved.\nTHANKS FOR PLAY ^^*", "CREDIT");
         }
 
-        private void HandleExit() // 나가기 핸들러 근데 메모리해체를 dispose로 쓰는게 더 깔끔하지 않을까?
+        private void HandleExit() // 메모리 해체 핸들러
         {
             Application.Exit();
         }

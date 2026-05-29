@@ -81,8 +81,8 @@ namespace CardChess.Cards
 
                 //  순수하게 '내 기물' 전체(킹 포함)에 쓸 수 있는 스킬들
                 case "위치 교환":
-                case "신성한 보호막":
-                case "영혼 해방":
+                case "방어막":
+                case "유체화":
                 case "봉인": 
                     return piece != null && piece.Owner == myPlayer;
 
@@ -115,14 +115,14 @@ namespace CardChess.Cards
 
             switch (Name)
             {
-                case "신성한 보호막":
+                case "방어막":
                     targetPiece.HasShield = true;
                     MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물에 공격 1회 방어 보호막이 씌워졌습니다.");
                     break;
 
                 case "봉인":
                     targetPiece.IsFrozen = true;
-                    MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 무적 및 행동 불가 상태가 되었습니다.");
+                    MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 봉인되었습니다. 무적 및 행동 불가 상태입니다.");
                     break;
 
                 case "기물 뺏기":
@@ -130,7 +130,7 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog($"[{Name}] 상대 기물의 소유권을 내 것으로 만들었습니다!");
                     break;
 
-                case "영혼 해방":
+                case "유체화":
                     // 현재 위치를 그림자(원래 위치)로 기억하고, 지속 턴을 2턴으로 설정
                     targetPiece.ShadowPosition = new Position(targetPos.Row, targetPos.Col);
                     targetPiece.ShadowTurns = 2;
@@ -151,7 +151,7 @@ namespace CardChess.Cards
                         state.SetPieceAt(pos2, targetPiece);
                         swapTarget.CurrentPosition = pos1;
                         targetPiece.CurrentPosition = pos2;
-                        MainForm.Instance.AddLog($"[{Name}] 두 기물의 위치가 교환되었습니다.");
+                        MainForm.Instance.AddLog($"[{Name}] 두 기물이 서로의 위치를 바꿉니다.");
                     }
                     break;
 
