@@ -37,12 +37,36 @@ namespace CardChess
         {
             InitializeComponent();
 
+            CardChess.Menu.SoundsManager.LoadALLSounds();
+            CardChess.Menu.SoundsManager.PlayBGM("bg_music");
+
             this.Width = 1600;
             this.Height = 900;
             this.DoubleBuffered = true; // 이미지 깜빡임 방지
 
             LoadGameAssets();
             InitLobbyUI();
+            Button btnSettings = new Button();
+            btnSettings.Text = "⚙️ 설정";
+            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
+            btnSettings.Size = new Size(100, 40);
+            btnSettings.Location = new Point(10, 10); // 좌측 상단 (10, 10) 위치
+            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
+            btnSettings.ForeColor = Color.White;
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Cursor = Cursors.Hand;
+
+            // 버튼 클릭 시 로비용 설정창 활성화 (인게임이 아니므로 false, 네트워크는 null 전달)
+            btnSettings.Click += (s, e) =>
+            {
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, false, null))
+                {
+                    settings.ShowDialog();
+                }
+            };
+
+            this.Controls.Add(btnSettings);
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
         }
         
         // 간단하게 로드 게임 에셋으로 시작
@@ -224,6 +248,11 @@ namespace CardChess
 
         private void HandleRoomCreate() // 방 만드는 핸들러
         {
+            // 버그 고침 두번눌러도 안튕기게
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
+            }
             udpProtocol = new UDPprotocol();
             udpProtocol.OnMessage += UdpProtocol_OnMessage;
 
@@ -248,6 +277,11 @@ namespace CardChess
             {
                 MessageBox.Show("접속 코드를 입력해주세요!");
                 return;
+            }
+            // 버그 고침 두번눌러도 안튕기게
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
             }
 
             udpProtocol = new UDPprotocol();
@@ -303,6 +337,15 @@ namespace CardChess
             LaunchMainGame();
         }
 
+        // 로비에서 창을 강제로 'X' 눌러서 껐을 때 통신 포트를 완벽하게 닫아줌
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
+            }
+            base.OnFormClosed(e);
+        }
         private void LaunchMainGame()
         {
             // 이미 게임창이 켜졌다면 패킷이 중복으로 날아와도 무조건 차단
@@ -343,7 +386,7 @@ namespace CardChess
 
         private void HandleExit() // 메모리 해체 핸들러
         {
-            Application.Exit();
+            Environment.Exit(0);
         }
     }
 }
