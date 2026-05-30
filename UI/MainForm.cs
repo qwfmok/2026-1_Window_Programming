@@ -84,8 +84,6 @@ namespace CardChess
         {
             InitializeComponent();
 
-            SoundsManager.LoadALLSounds(); // 사운드의 클래스 소스파일 참조
-            CardChess.Menu.SoundsManager.PlayBGM("bg_music");
 
             // --- 화면 버퍼 제거부 ---
             Action<Control> enableDoubleBuffer = (control) =>
@@ -200,6 +198,29 @@ namespace CardChess
 
             // 이게 있어야 첫 턴이라는 개념이 생김
             _ = this.battleManager.ProcessNextPhase();
+
+
+            //  좌측 상단 환경 설정(톱니바퀴) 버튼 생성
+            Button btnSettings = new Button();
+            btnSettings.Text = "⚙️ 설정";
+            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
+            btnSettings.Size = new Size(100, 40);
+            btnSettings.Location = new Point(10, 10);
+            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
+            btnSettings.ForeColor = Color.White;
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Cursor = Cursors.Hand;
+
+            // 버튼 클릭 시 방금 만든 SettingsMenu 팝업창을 띄움
+            btnSettings.Click += (s, e) =>
+            {
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, true, this.udpProtocol))
+                {
+                    settings.ShowDialog();
+                }
+            };
+            this.Controls.Add(btnSettings);
+            btnSettings.BringToFront();
         }
 
         // 2. 턴 체인지
@@ -1060,7 +1081,7 @@ namespace CardChess
         {
             Button cardButton = sender as Button;
 
-            if (cardButton == null)
+            if (cardButton == null) 
                 return;
 
             ICard card = cardButton.Tag as ICard;

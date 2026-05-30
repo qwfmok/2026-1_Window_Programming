@@ -37,12 +37,36 @@ namespace CardChess
         {
             InitializeComponent();
 
+            CardChess.Menu.SoundsManager.LoadALLSounds();
+            CardChess.Menu.SoundsManager.PlayBGM("bg_music");
+
             this.Width = 1600;
             this.Height = 900;
             this.DoubleBuffered = true; // 이미지 깜빡임 방지
 
             LoadGameAssets();
             InitLobbyUI();
+            Button btnSettings = new Button();
+            btnSettings.Text = "⚙️ 설정";
+            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
+            btnSettings.Size = new Size(100, 40);
+            btnSettings.Location = new Point(10, 10); // 좌측 상단 (10, 10) 위치
+            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
+            btnSettings.ForeColor = Color.White;
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Cursor = Cursors.Hand;
+
+            // 버튼 클릭 시 로비용 설정창 활성화 (인게임이 아니므로 false, 네트워크는 null 전달)
+            btnSettings.Click += (s, e) =>
+            {
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, false, null))
+                {
+                    settings.ShowDialog();
+                }
+            };
+
+            this.Controls.Add(btnSettings);
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
         }
         
         // 간단하게 로드 게임 에셋으로 시작
