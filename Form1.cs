@@ -248,6 +248,11 @@ namespace CardChess
 
         private void HandleRoomCreate() // 방 만드는 핸들러
         {
+            // 버그 고침 두번눌러도 안튕기게
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
+            }
             udpProtocol = new UDPprotocol();
             udpProtocol.OnMessage += UdpProtocol_OnMessage;
 
@@ -272,6 +277,11 @@ namespace CardChess
             {
                 MessageBox.Show("접속 코드를 입력해주세요!");
                 return;
+            }
+            // 버그 고침 두번눌러도 안튕기게
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
             }
 
             udpProtocol = new UDPprotocol();
@@ -327,6 +337,15 @@ namespace CardChess
             LaunchMainGame();
         }
 
+        // 로비에서 창을 강제로 'X' 눌러서 껐을 때 통신 포트를 완벽하게 닫아줌
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (udpProtocol != null)
+            {
+                udpProtocol.Close();
+            }
+            base.OnFormClosed(e);
+        }
         private void LaunchMainGame()
         {
             // 이미 게임창이 켜졌다면 패킷이 중복으로 날아와도 무조건 차단
@@ -367,7 +386,7 @@ namespace CardChess
 
         private void HandleExit() // 메모리 해체 핸들러
         {
-            Application.Exit();
+            Environment.Exit(0);
         }
     }
 }
