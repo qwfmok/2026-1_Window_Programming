@@ -218,27 +218,50 @@ namespace CardChess
             _ = this.battleManager.ProcessNextPhase();
 
 
-            //  좌측 상단 환경 설정(톱니바퀴) 버튼 생성
+            // 설정 에셋 이미지 버튼 추가
             Button btnSettings = new Button();
-            btnSettings.Text = "⚙️ 설정";
-            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
-            btnSettings.Size = new Size(100, 40);
-            btnSettings.Location = new Point(10, 10);
-            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
-            btnSettings.ForeColor = Color.White;
-            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
+            btnSettings.Location = new Point(10, 10); // 좌측 상단
             btnSettings.Cursor = Cursors.Hand;
 
-            // 버튼 클릭 시 방금 만든 SettingsMenu 팝업창을 띄움
+            // 버튼 뼈대(테두리, 클릭 시 효과 등) 투명화
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnSettings.BackColor = Color.Transparent;
+
+            // btn_settings.png 이미지 씌우기
+            try
+            {
+                string settingsImgPath = Path.Combine(Application.StartupPath, "Assets", "btn_settings.png");
+                if (File.Exists(settingsImgPath))
+                {
+                    btnSettings.BackgroundImage = Image.FromFile(settingsImgPath);
+                    btnSettings.BackgroundImageLayout = ImageLayout.Zoom; // 비율 유지하며 꽉 채우기
+                }
+                else
+                {
+                    // 혹시라도 이미지를 못 찾을 경우를 대비한 텍스트 임시 출력
+                    btnSettings.Text = "⚙️ 설정";
+                    btnSettings.ForeColor = Color.White;
+                }
+            }
+            catch { }
+
+            // 버튼 클릭 시 로비용 설정창 활성화
             btnSettings.Click += (s, e) =>
             {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
                 using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, true, this.udpProtocol))
                 {
                     settings.ShowDialog();
                 }
             };
+
             this.Controls.Add(btnSettings);
-            btnSettings.BringToFront();
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
+
 
             // 채팅창 세팅
             txtChatInput = new TextBox();

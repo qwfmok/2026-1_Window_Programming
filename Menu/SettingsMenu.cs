@@ -50,11 +50,12 @@ namespace CardChess.Menu
 
         private void InitializeUI()
         {
-            int startY = 30;
-            int gap = 70;
+            int currentY = 25;
+            int gap = 65;
 
             // 1. 전체화면 / 창모드 전환 버튼
-            Button btnScreen = CreateButton("🖥️ 전체화면 / 창모드", startY);
+            Button btnScreen = CreateImageButton("button_long_screen_change.png", "전체화면 / 창모드", currentY);
+            currentY += gap;
             btnScreen.Click += (s, e) =>
             {
                 if (parentForm.FormBorderStyle == FormBorderStyle.None)
@@ -62,7 +63,6 @@ namespace CardChess.Menu
                     parentForm.FormBorderStyle = FormBorderStyle.Sizable;
                     parentForm.WindowState = FormWindowState.Normal;
 
-                    // 모니터 정중앙으로 좌표 계산 후 이동
                     Rectangle screen = Screen.FromControl(parentForm).WorkingArea;
                     parentForm.Location = new Point(
                         screen.X + (screen.Width - parentForm.Width) / 2,
@@ -76,32 +76,42 @@ namespace CardChess.Menu
                 }
             };
 
-            // 2. 🌟 BGM 끄기 / 켜기 버튼 (알림창 없이 즉시 토글)
-            Button btnSound = CreateButton(isBgmOn ? "🔊 BGM 끄기" : "🔇 BGM 켜기", startY + gap);
+            // 2. BGM 끄기 / 켜기 버튼 (이미지 동적 전환)
+
+            string initialBgmImg = isBgmOn ? "button_long_bgm_off.png" : "button_long_bgm_on.png";
+            Button btnSound = CreateImageButton(initialBgmImg, isBgmOn ? "BGM 끄기" : "BGM 켜기", currentY);
+            currentY += gap;
+
             btnSound.Click += (s, e) =>
             {
-                isBgmOn = !isBgmOn; // 상태 뒤집기
+                isBgmOn = !isBgmOn;
 
                 if (isBgmOn)
                 {
                     SoundsManager.PlayBGM("bg_music");
-                    btnSound.Text = "🔊 BGM 끄기";
+                    UpdateImageButton(btnSound, "button_long_bgm_off.png", "BGM 끄기");
                 }
                 else
                 {
                     SoundsManager.StopBGM();
-                    btnSound.Text = "🔇 BGM 켜기";
+                    UpdateImageButton(btnSound, "button_long_bgm_on.png", "BGM 켜기");
                 }
             };
 
-            // 3. 메인으로 돌아가기 (게임 중일 때만 표시)
+            // 3. 항복 버튼 (게임 중일 때만 표시)
             if (isInGame)
             {
-                Button btnLobby = CreateButton("🏃 메인으로 (항복)", startY + gap * 2);
-                btnLobby.BackColor = Color.FromArgb(200, 205, 92, 92); // 눈에 띄는 붉은색 반투명
+                // 텍스트를 "항복"으로 간결하게 변경
+                Button btnLobby = CreateImageButton("button_long_surrender.png", "항복", currentY);
+                currentY += gap;
+
+                // 마우스를 올렸을 때 부가 설명(Tooltip) 표시
+                ToolTip toolTip = new ToolTip();
+                toolTip.SetToolTip(btnLobby, "메인 화면으로 돌아가며 패배 처리됩니다.");
+
                 btnLobby.Click += (s, e) =>
                 {
-                    DialogResult result = MessageBox.Show("메인 화면으로 돌아가시겠습니까?\n진행 중인 게임은 패배(항복) 처리됩니다.", "경고", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    DialogResult result = MessageBox.Show("항복하시겠습니까?\n메인 화면으로 돌아가며 패배 처리됩니다.", "경고", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (result == DialogResult.Yes)
                     {
                         if (udp != null && udp.IsConnected) udp.Send("SURRENDER");
@@ -111,41 +121,74 @@ namespace CardChess.Menu
                 };
             }
 
-            // 4. 마스터 볼륨 조절
-            int volumeY = startY + gap * 4; // 30 + 280 = 310px 위치에 정렬
+            // 4. 닫기 버튼
+            Button btnClose = CreateImageButton("button_long_close_menu.png", "닫기", currentY);
+            currentY += gap;
+            btnClose.Click += (s, e) => this.Close();
 
-            Label lblMasterVol = CreateLabel($"🔊 게임 음량: {(int)(SoundsManager.MasterVolume * 100)}%", volumeY);
+            // 5. 마스터 볼륨 조절
+            currentY += 10;
 
-            TrackBar trackMaster = CreateTrackBar((int)(SoundsManager.MasterVolume * 100), volumeY + 25);
+            Label lblMasterVol = CreateLabel($"🔊 게임 음량: {(int)(SoundsManager.MasterVolume * 100)}%", currentY);
+
+            TrackBar trackMaster = CreateTrackBar((int)(SoundsManager.MasterVolume * 100), currentY + 25);
             trackMaster.Scroll += (s, e) =>
             {
                 SoundsManager.MasterVolume = trackMaster.Value / 100f;
                 lblMasterVol.Text = $"🔊 게임 음량: {trackMaster.Value}%";
             };
 
-            // 5. 닫기 버튼
-            Button btnClose = CreateButton("❌ 닫기", startY + gap * 3);
-            btnClose.Click += (s, e) => this.Close();
+            this.ClientSize = new Size(this.ClientSize.Width, currentY + 120);
         }
 
-        // 🌟 배경이 보이도록 버튼을 '반투명'하게 만드는 헬퍼 함수
-        private Button CreateButton(string text, int yPos)
+        // 이미지 버튼 생성기
+        private Button CreateImageButton(string imgName, string fallbackText, int yPos)
         {
             Button btn = new Button();
-            btn.Text = text;
             btn.Size = new Size(260, 50);
             btn.Location = new Point((this.ClientSize.Width - 260) / 2, yPos);
-            btn.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
+
+            // 이미지 버튼의 배경/테두리 투명화 처리
             btn.FlatStyle = FlatStyle.Flat;
-            btn.ForeColor = Color.White;
-            btn.BackColor = Color.FromArgb(180, 30, 30, 30); // 180의 투명도를 가진 다크그레이 (배경이 비침)
-            btn.FlatAppearance.BorderSize = 0; // 테두리 제거로 깔끔하게
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btn.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btn.BackColor = Color.Transparent;
             btn.Cursor = Cursors.Hand;
+
+            UpdateImageButton(btn, imgName, fallbackText);
+
             this.Controls.Add(btn);
             return btn;
         }
 
-        // 마스터 볼륨 조절용 라벨
+        // 버튼 이미지 갈아끼우기 (BGM 토글 등에서 재사용)
+        private void UpdateImageButton(Button btn, string imgName, string fallbackText)
+        {
+            string imgPath = Path.Combine(Application.StartupPath, "Assets", imgName);
+            if (File.Exists(imgPath))
+            {
+                btn.BackgroundImage = Image.FromFile(imgPath);
+                btn.BackgroundImageLayout = ImageLayout.Zoom;
+                btn.Text = ""; // 이미지가 정상 로드되면 텍스트 제거
+            }
+            else
+            {
+                // 이미지가 없을 때를 대비한 텍스트 렌더링
+                btn.Text = fallbackText;
+                btn.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
+                btn.ForeColor = Color.White;
+                btn.BackColor = Color.FromArgb(180, 30, 30, 30);
+            }
+        }
+
+        // 픽쳐박스 안전 로드 (타이틀용)
+        private void LoadImageSafe(PictureBox pic, string imgName)
+        {
+            string imgPath = Path.Combine(Application.StartupPath, "Assets", imgName);
+            if (File.Exists(imgPath)) pic.Image = Image.FromFile(imgPath);
+        }
+
         private Label CreateLabel(string text, int yPos)
         {
             Label lbl = new Label();
@@ -159,7 +202,6 @@ namespace CardChess.Menu
             return lbl;
         }
 
-        // 마스터 볼륨 조절용 트랙바
         private TrackBar CreateTrackBar(int currentVal, int yPos)
         {
             TrackBar track = new TrackBar();
@@ -169,11 +211,13 @@ namespace CardChess.Menu
             track.Size = new Size(260, 30);
             track.Location = new Point((this.ClientSize.Width - 260) / 2, yPos);
             track.TickStyle = TickStyle.None;
-            track.BackColor = Color.Gray;
+            track.BackColor = Color.FromArgb(40, 40, 40);
+
             track.Cursor = Cursors.Hand;
             this.Controls.Add(track);
             return track;
         }
+        
 
     }
 }
