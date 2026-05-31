@@ -13,7 +13,7 @@ namespace CardChess.Menu
 {
     public static class SoundsManager
     {
-        // MP3
+        // MP3를 딕셔너리로 메모리에 올려서 관리
         private static Dictionary<string, string> soundPaths = new Dictionary<string, string>();
 
         // BGM 전용 플레이어 및 리더 변수
@@ -23,13 +23,13 @@ namespace CardChess.Menu
 
         private static float masterVolume = 0.5f;
 
+        // BGM이 재생 중일 때에도 환경 설정에 올려서 마스터 볼륨 반영
         public static float MasterVolume
         {
             get => masterVolume;
             set
             {
                 masterVolume = Math.Max(0.0f, Math.Min(1.0f, value));
-                // BGM이 재생 중이라면 즉시 볼륨 변경 반영
                 if (bgmReader != null)
                 {
                     bgmReader.Volume = masterVolume;
@@ -39,7 +39,7 @@ namespace CardChess.Menu
 
         public static void LoadALLSounds()
         {
-            // 확장자를 .mp3로 변경
+            // NAudio 라이브러리를 채용하므로 확장자를 기존 Wav 파일에서 Mp3로 변경
             string[] soundFiles = { "bg_music", "Piece_select", "Piece_attack", "Menu_icon_select", "Card_wall", "Card_timewalk", "Card_effect" };
 
             foreach (var soundName in soundFiles)
@@ -48,7 +48,7 @@ namespace CardChess.Menu
 
                 if (File.Exists(path))
                 {
-                    soundPaths[soundName] = path; // 경로만 보관 (재생할 때 읽음)
+                    soundPaths[soundName] = path;
                 }
                 else
                 {
@@ -61,9 +61,9 @@ namespace CardChess.Menu
         {
             if (!soundPaths.TryGetValue(soundName, out string path)) return;
 
+            // 중복 재생 방지
             try
             {
-                // 이미 재생 중인 BGM이 있다면 정지 및 메모리 해제
                 StopBGM();
 
                 bgmOutput = new WaveOutEvent();
@@ -73,12 +73,11 @@ namespace CardChess.Menu
                 bgmOutput.Play();
                 isBgmLooping = true;
 
-                // 🌟 BGM 무한 루프 구현: 재생이 끝나면 다시 처음(0초)으로 돌려서 플레이
                 bgmOutput.PlaybackStopped += (sender, args) =>
                 {
                     if (isBgmLooping && bgmReader != null && bgmOutput != null)
                     {
-                        bgmReader.Position = 0; // 오디오 스트림을 처음으로 되감기
+                        bgmReader.Position = 0;
                         bgmOutput.Play();
                     }
                 };
@@ -89,6 +88,7 @@ namespace CardChess.Menu
             }
         }
 
+        // BGM 끄기 버튼 이벤트 핸들러로 정지 후 메모리 해제
         public static void StopBGM()
         {
             isBgmLooping = false;
@@ -107,21 +107,20 @@ namespace CardChess.Menu
             }
         }
 
-        // 🌟 효과음 동시 재생(Fire and Forget) 함수
         public static void Play(string soundName)
         {
             if (!soundPaths.TryGetValue(soundName, out string path)) return;
 
             try
             {
-                // 효과음은 불릴 때마다 독립된 장치(채널)를 생성하므로 서로의 소리를 끊지 않습니다.
+                // 효과음은 독립 재생하여 서로의 음향에 간섭하지 않도록 조정
                 var sfxOutput = new WaveOutEvent();
                 var sfxReader = new AudioFileReader(path);
 
                 sfxOutput.Init(sfxReader);
                 sfxOutput.Play();
 
-                // 효과음 재생이 끝나면 자동으로 리소스를 닫고 메모리에서 해제(Dispose)
+                // 효과음 재생 종료 시 메모리 해제
                 sfxOutput.PlaybackStopped += (sender, args) =>
                 {
                     sfxOutput.Dispose();

@@ -16,13 +16,12 @@ namespace CardChess.Menu
     {
         public static void AddSurrenderButton(Form mainForm, UDPprotocol udpProtocol)
         {
-            // 버튼 크기와 위치 좌표 정의
+            // 버튼 크기와 위치 좌표 정의 및 폼 디자인 설정
             Button btnSurrender = new Button();
             btnSurrender.Name = "btnSurrender";
             btnSurrender.Size = new Size(100, 40);
             btnSurrender.Location = new Point(1085, 452);
 
-            // 버튼의 윈도우 기본 테두리를 제거
             btnSurrender.FlatStyle = FlatStyle.Flat;
             btnSurrender.FlatAppearance.BorderSize = 0;
             btnSurrender.FlatAppearance.MouseDownBackColor = Color.Transparent;
@@ -44,7 +43,7 @@ namespace CardChess.Menu
                 btnSurrender.ForeColor = Color.White;
             }
 
-            // 클릭 시?
+            // 서렌더 버튼 클릭 시 이벤트 처리
             btnSurrender.Click += (sender, e) =>
             {
                 MessageBox.Show("항복했습니다.", "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -65,7 +64,7 @@ namespace CardChess.Menu
                     }
                 }
 
-                // 서렌 클릭의 블록 안에서 수행되므로 누르면 그대로 메인폼 닫힘
+                // 서렌더 클릭의 블록 안에서 수행되므로 누르면 그대로 메인폼 닫힘
                 mainForm.Close();
             };
             mainForm.Controls.Add(btnSurrender);
