@@ -22,7 +22,7 @@ namespace CardChess.Cards
 
         public bool CanUse(Position targetPos, GameState state)
         {
-            // 플레이어당 활성화 가능한 함정 개수 제한이 있다면 여기서 체크
+            // 플레이어당 활성화 가능한 함정 개수 제한이 있다면 여기서 검사
             // 예: return state.CurrentPlayerTraps.Count < 3;
             return true;
         }

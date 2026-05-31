@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.NetworkInformation;
 
-// 통신 프로토콜 구현은 여기서
+/// 통신 프로토콜 구현은 여기서
 
 namespace CardChess.Core
 {

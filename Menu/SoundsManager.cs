@@ -4,11 +4,16 @@ using System.IO;
 using System.Windows.Forms;
 using NAudio.Wave; // NAudio 네임스페이스 추가
 
+
+/// 사운드 관리 구현은 여기서
+
+/// 음량 조절 구현을 위해 NAudio 라이브러리 사용
+
 namespace CardChess.Menu
 {
     public static class SoundsManager
     {
-        // MP3 파일 경로 캐싱
+        // MP3
         private static Dictionary<string, string> soundPaths = new Dictionary<string, string>();
 
         // BGM 전용 플레이어 및 리더 변수
