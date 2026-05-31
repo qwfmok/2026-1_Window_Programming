@@ -9,30 +9,30 @@ namespace CardChess.Pieces
 {
     public class Knight : IPiece
     {
-        // 나이트의 현재 위치, 소유자, 종류 정의
+        // 나이트 클래스 정의 | 현재 좌표, 소유자, 기물 타입, 기타 기물 타게팅 카드 응용 변수
         public Position CurrentPosition { get; set; }
         public PlayerType Owner { get; set; }
         public PieceType Type => PieceType.Knight;
 
-        public bool HasShield { get; set; } = false;          // 신성한 보호막 (공격 1회 무시)
-        public bool IsFrozen { get; set; } = false;           // 존야 (무적 및 이동/공격 불가)
+        public bool HasShield { get; set; } = false; // 보호막 | 공격 1회 무시
+        public bool IsFrozen { get; set; } = false; // 존야 | 무적 및 이동불가
         public int FrozenTurns { get; set; } = 0;
-        public Position? ShadowPosition { get; set; } = null; // 영혼 해방 (돌아갈 원본 위치, nullable)
-        public int ShadowTurns { get; set; } = 0;             // 영혼 해방 (남은 턴 수)
+        public Position? ShadowPosition { get; set; } = null; // 영혼 해방 | 돌아갈 위치
+        public int ShadowTurns { get; set; } = 0; // 영혼 해방 | 남은 턴 수
 
-        // 생성자: 소유자와 초기 위치 설정
+        // 소유자와 초기 좌표 설정
         public Knight(PlayerType owner, Position currentPosition)
         {
             Owner = owner;
             CurrentPosition = currentPosition;
         }
 
-        // 이동 로직: L자 모양으로 점프하여 이동 (다른 기물을 뛰어넘을 수 있음)
+        // 나이트의 기본 공격 및 이동 구현 | 다른 기물 뛰어넘을 수 있는 기능
         public List<Position> GetMovablePositions(GameState state)
         {
             List<Position> positions = new List<Position>();
 
-            // [존야 방어 로직] 얼어붙은 상태라면 아무 데도 갈 수 없음! (빈 리스트 반환)
+            // 존야 상태일 경우 이동 불가능
             if (IsFrozen) return positions;
 
             // 나이트가 이동 가능한 8개 지점 정의 (2칸 직진 후 옆으로 1칸)
@@ -63,7 +63,6 @@ namespace CardChess.Pieces
                     }
                 }
             }
-
             return positions;
         }
 
@@ -74,7 +73,6 @@ namespace CardChess.Pieces
         }
 
         // 타겟 좌표가 이동 가능한 리스트에 있는지 확인
-        // [수정됨] Contains 버그를 방지하기 위해 Any 방식으로 교체
         public bool CanMove(Position target, GameState state)
         {
             return GetMovablePositions(state).Any(p => p.Row == target.Row && p.Col == target.Col);

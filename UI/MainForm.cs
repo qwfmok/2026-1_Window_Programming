@@ -25,7 +25,7 @@ namespace CardChess
         // --- 폼 기본 디자인 컨트롤 ---
         private Panel pnlPlayerHand;
         private Panel pnlPlayerDeck;
-        private Panel pnlBoard; // 중앙 패널보드 여기에 보드들어감
+        private Panel pnlBoard;
         private Panel pnlPlayArea;
         private ListBox logbox;
         private Panel pnlOpponentDeck;
@@ -388,6 +388,10 @@ namespace CardChess
             pnlBoard.Invalidate();
         }
 
+
+        /// --- 보드 이벤트 처리기 ---
+
+        // 보드 기물 마우스 클릭 이벤트 처리
         private void PnlBoard_MouseClick(object sender, MouseEventArgs e)
         {
             if (!battleManager.IsPlayable)
@@ -519,7 +523,7 @@ namespace CardChess
             // 턴 넘기기 버튼 -> 턴 상태 간판으로 수정
             btnPassTurn.Location = new Point(800, 380);
             btnPassTurn.Size = new Size(200, 40);
-            btnPassTurn.Cursor = Cursors.Default; // 마우스 올려도 손가락 모양 안 뜨게
+            btnPassTurn.Cursor = Cursors.Default; // 마우스 커서 변경 막는 속성
             btnPassTurn.FlatStyle = FlatStyle.Flat; // 테두리 제거
             btnPassTurn.FlatAppearance.BorderSize = 0; // 깔끔한 간판 디자인
 
@@ -531,7 +535,7 @@ namespace CardChess
                 pnlPlayerHand.BackgroundImageLayout = ImageLayout.Stretch;
             }
 
-            // 카드 설명창(pnlPlayerDeck)을 pnlPlayerHand의 우측 구석에 깔끔하게 처박아둠
+            // 카드 툴팁 텍스트 칸을 플레이어 핸드의 오른쪽 칸에 넣어서 가독성 향상
             pnlPlayerDeck.Parent = pnlPlayerHand;
             pnlPlayerDeck.Location = new Point(360, 10);
             pnlPlayerDeck.Size = new Size(210, 280);
@@ -544,7 +548,7 @@ namespace CardChess
             lblCardDescription.BackColor = Color.Transparent;
             lblCardDescription.ForeColor = Color.White;
 
-            // 버그를 유발하던 쓰레기 패널 숨기기
+            // 기타 패널 숨기기
             if (pnlOpponentDeck != null) pnlOpponentDeck.Visible = false;
 
             pnlPlayerDeck.BringToFront();
@@ -776,16 +780,16 @@ namespace CardChess
                 }
                 else
                 {
-                    // 🌟 손패 밖으로 던졌을 때: 사용 시도
+                    // 손패 밖으로 던졌을 때는 사용 시도로 간주
 
-                    // [방어막] 내 턴이 아니면 밖으로 던져도 무효(취소) 처리!
+                    // 내 턴이 아닐 경우 카드의 발동을 캔슬
                     if (!battleManager.IsPlayable || gameManager.CurrentTurn != inputController.MyPlayerType)
                     {
                         AddLog("지금은 카드를 사용할 수 없는 턴입니다. (순서 변경만 가능)");
                         inputController.CancelSelection();
                         RefreshHand();
                     }
-                    else // 내 턴이라면 정상적으로 카드 발동!
+                    else // 내 턴이 맞을 경우 정상적으로 카드 발동
                     {
                         if (boardView.TryConvertPixelToPosition(boardPt.X, boardPt.Y, out Position targetPos))
                         {
@@ -1031,7 +1035,7 @@ namespace CardChess
             pnlBoard.Invalidate();
         }
 
-        // 🌟 갈 수 있는 곳을 계산해서 넘겨주는 핵심 마법 함수
+        // 이동할 수 있는 곳을 계산
         private void UpdateBoardHighlights(Position hoverPos)
         {
             IPiece targetPiece = null;
@@ -1305,7 +1309,7 @@ namespace CardChess
         {
             if (e.KeyCode == Keys.Enter)
             {
-                e.SuppressKeyPress = true; // 윈도우 특유의 '띵!' 에러 소리 방지
+                e.SuppressKeyPress = true; // 윈도우 특유의 에러 비프음 방지
 
                 string chatMsg = txtChatInput.Text.Trim();
                 if (!string.IsNullOrEmpty(chatMsg))
@@ -1313,7 +1317,7 @@ namespace CardChess
                     // 1. 내 화면 로그창에 먼저 띄우기
                     AddLog($"[{inputController.MyPlayerType}] : {chatMsg}");
 
-                    // 2. 상대방에게 네트워크로 쏘기 ("CHAT,메시지" 형태)
+                    // 2. 상대방에게 네트워크 전달 ("CHAT,메시지" 형태)
                     if (udpProtocol != null && udpProtocol.IsConnected)
                     {
                         udpProtocol.Send($"CHAT,{chatMsg}");

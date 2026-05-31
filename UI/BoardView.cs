@@ -22,6 +22,7 @@ namespace CardChess.View
         public float YOffset { get; private set; }
         public float CellWidth { get; private set; }
         public float CellHeight { get; private set; }
+
         // --- 이미지 ---
         private Image boardImage = null;
         private Image boardBgImage = null;
@@ -67,26 +68,26 @@ namespace CardChess.View
 
         private void InitResources()
         {
-            string framePath = Path.Combine(Application.StartupPath, "Assets", "background.png"); // 이걸로 보드 프레임 로딩
+            // 보드 프레임, 보드, 글로벌 이펙트를 메모리에 로드
+            string framePath = Path.Combine(Application.StartupPath, "Assets", "background.png");
             if (File.Exists(framePath)) boardBgImage = Image.FromFile(framePath);
-            string boardPath = Path.Combine(Application.StartupPath, "Assets", "board.png"); // 이건 보드 로딩
+            string boardPath = Path.Combine(Application.StartupPath, "Assets", "board.png");
             if (File.Exists(boardPath)) boardImage = Image.FromFile(boardPath);
-            string clockPath = Path.Combine(Application.StartupPath, "Assets", "effect_clock.png"); // 이건 글로벌 이펙트
+            string clockPath = Path.Combine(Application.StartupPath, "Assets", "effect_clock.png");
             if (File.Exists(clockPath)) clockEffectImage = Image.FromFile(clockPath);
-            string wallPath = Path.Combine(Application.StartupPath, "Assets", "effect_wall.png"); // 이건 방벽 이펙트
+            string wallPath = Path.Combine(Application.StartupPath, "Assets", "effect_wall.png");
             if (File.Exists(wallPath)) wallEffectImage = Image.FromFile(wallPath);
             // 파일 경로는 둘 다 바이너리/디버그 안에 Assets 폴더임
 
             typeof(Panel).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                          ?.SetValue(pnlBoard, true);
-            // 화면 갱신 시 깜빡이는 버퍼링 방지
+            // 화면 갱신 시 버퍼 방지
         }
 
         public void CalculateBoardDimensions()
         {
             if (pnlBoard == null) return;
 
-            // background.png의 비대칭 비율을 반영함
             XOffset = pnlBoard.Width * (60.5f / 996f); // 앞자리 숫자 높이거나 낮추면 보드 프레임이 좌우로 이동함 중간값은 60.5
             YOffset = pnlBoard.Height * (50f / 1012f); // 앞자리 숫자 높이거나 낮추면 마찬가지로 프레임은 상하로 이동함 중간값은 50
 
@@ -119,7 +120,7 @@ namespace CardChess.View
 
         public void DrawBoard(Graphics g)
         {
-            // Graphics 객체가 Dispose되었거나 상태가 나쁘면 즉시 리턴 (안전장치)
+            // 그래픽 객체가 메모리 해제될 경우 탈출
             if (g == null) return;
             try { g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; } catch { return; }
 
@@ -133,13 +134,11 @@ namespace CardChess.View
                 CalculateBoardDimensions();
                 g.DrawImage(boardImage, XOffset, YOffset, CellWidth * BoardManager.MAX_COL, CellHeight * BoardManager.MAX_ROW);
             }
+
             // 애니비아 벽(지형) 렌더링
-            // =========================================================================================
-            // 데이터가 없거나, 그리는 도중 데이터가 변경되어 예외가 발생하더라도 
-            // 아래 기물 그리기 로직에 영향이 가지 않도록 try-catch로 단단히 감쌉니다.
             try
             {
-                // Null 체크 (기본)
+                // 빈 칸인지 검사
                 if (gameManager.State != null && gameManager.State.ActiveWalls != null && gameManager.State.ActiveWalls.Count > 0)
                 {
                     // 그리는 도중 데이터가 변경되면 Iteration Error가 발생하여 기물이 안 그려집니다.
@@ -160,7 +159,7 @@ namespace CardChess.View
                             if (!int.TryParse(coords[0], out int logicalRow)) continue;
                             if (!int.TryParse(coords[1], out int logicalCol)) continue;
 
-                            // [수정] 2P 시점일 때 보드를 뒤집어주는 헬퍼 함수 통과시키기!
+                            // 플레이어의 시점이 바뀌면 보드도 뒤집어지는 부분을 실행
                             int vRow = GetVisualRow(logicalRow);
                             int vCol = GetVisualCol(logicalCol);
 
@@ -168,14 +167,14 @@ namespace CardChess.View
                             float x = XOffset + vCol * CellWidth;
                             float y = YOffset + vRow * CellHeight;
 
-                            // 방벽 png 메모리 올려놓은 거 드로잉해주는 조건문
+                            // 방벽 드로잉
                             if (wallEffectImage != null)
                             {
                                 g.DrawImage(wallEffectImage, x, y, CellWidth, CellHeight);
                             }
                             else
                             {
-                                // 이미지가 없으면 기존처럼 하늘색 네모 그대로 나와용
+                                // 이미지가 없으면 기존처럼 하늘색 사각형 출력
                                 using (SolidBrush iceBrush = new SolidBrush(Color.FromArgb(120, 135, 206, 235)))
                                 {
                                     g.FillRectangle(iceBrush, x, y, CellWidth, CellHeight);
@@ -197,7 +196,7 @@ namespace CardChess.View
                         }
                         catch
                         {
-                            // 한 타일 그리기 실패 시 해당 타일만 스킵하고 다음 타일로 넘어갑니다.
+                            // 한 타일 그리기 실패 시 해당 타일만 스킵하고 진행
                             continue;
                         }
                     }
@@ -205,9 +204,9 @@ namespace CardChess.View
             }
             catch
             {
-                // 벽 그리기 전체 로직이 터지더라도 그냥 넘어갑니다. (기물은 그려야 하니까)
+                // 벽 그리기 전체 로직이 터지더라도 기물 이미지 생성을 위해 스킵
             }
-            // =========================================================================================
+
             if (MoveHighlights != null && MoveHighlights.Count > 0)
             {
                 using (SolidBrush moveBrush = new SolidBrush(Color.FromArgb(100, 144, 238, 144))) // 반투명 초록색
@@ -234,7 +233,7 @@ namespace CardChess.View
                 }
             }
 
-            // 마우스 올린 칸에 노란색 테두리 그리기
+            // 보드 위에서의 현재 마우스 위치를 노란색으로 표시
             if (HoveredCell.HasValue)
             {
                 using (Pen hoverPen = new Pen(Color.Gold, 3))
@@ -252,9 +251,8 @@ namespace CardChess.View
 
             if (isClockEffectPlaying && clockEffectImage != null)
             {
-                // 사인 함수(Sin)를 써서 투명도가 0 -> 최대치 -> 0으로 부드럽게 감쇠하도록 만듦
                 float progress = clockEffectTimer / clockEffectDuration;
-                float alpha = (float)Math.Sin(progress * Math.PI) * 0.7f; // 최대 투명도를 70%로 제한해서 밑의 보드가 살짝 보이게 튜닝
+                float alpha = (float)Math.Sin(progress * Math.PI) * 0.7f;
 
                 using (var attribs = new ImageAttributes())
                 {
@@ -264,7 +262,6 @@ namespace CardChess.View
                     float boardWidth = CellWidth * BoardManager.MAX_COL;
                     float boardHeight = CellHeight * BoardManager.MAX_ROW;
 
-                    // 딱 체스 보드판 그리드 영역 크기만큼 상단에 덮어씌움
                     g.DrawImage(
                         clockEffectImage,
                         new Rectangle((int)XOffset, (int)YOffset, (int)boardWidth, (int)boardHeight),
@@ -318,6 +315,7 @@ namespace CardChess.View
                 }
             }
         }
+
         // 기물 처음 생성할 때 위치 뒤집기
         public void SyncPiecesWithBackend()
         {
@@ -364,6 +362,7 @@ namespace CardChess.View
                 }
             }
         }
+
         // 기물이 날아갈 때 도착 좌표 뒤집기
         public void HandleMovementAnimation()
         {
@@ -392,6 +391,7 @@ namespace CardChess.View
                 }
             }
         }
+
         // 외부 호출용 함수
         public void TriggerClockEffect()
         {

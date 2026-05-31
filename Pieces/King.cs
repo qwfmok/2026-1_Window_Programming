@@ -9,28 +9,29 @@ namespace CardChess.Pieces
 {
     public class King : IPiece
     {
-        // 킹의 현재 위치, 소유자, 종류 정의
+        // 킹 클래스 정의 | 현재 좌표, 소유자, 기물 타입, 기타 기물 타게팅 카드 응용 변수
         public Position CurrentPosition { get; set; }
         public PlayerType Owner { get; set; }
         public PieceType Type => PieceType.King;
-        public bool HasShield { get; set; } = false;          // 신성한 보호막 (공격 1회 무시)
-        public bool IsFrozen { get; set; } = false;           // 존야 (무적 및 이동/공격 불가)
+        public bool HasShield { get; set; } = false; // 보호막 | 공격 1회 무시
+        public bool IsFrozen { get; set; } = false; // 존야 | 무적 및 이동불가
         public int FrozenTurns { get; set; } = 0;
-        public Position? ShadowPosition { get; set; } = null;  // 영혼 해방 (돌아갈 원본 위치)
-        public int ShadowTurns { get; set; } = 0;             // 영혼 해방 (남은 턴 수)
-        // 생성자: 소유자와 초기 위치 설정
+        public Position? ShadowPosition { get; set; } = null; // 영혼 해방 | 돌아갈 위치
+        public int ShadowTurns { get; set; } = 0; // 영혼 해방 | 남은 턴 수
+
+        // 소유자와 초기 좌표 설정
         public King(PlayerType owner, Position currentPosition)
         {
             Owner = owner;
             CurrentPosition = currentPosition;
         }
 
-        // 이동 로직: 주변 8방향으로 딱 한 칸씩만 이동 가능
+        // 킹의 기본 공격 및 이동 구현
         public List<Position> GetMovablePositions(GameState state)
         {
             List<Position> positions = new List<Position>();
 
-            // [존야 방어 로직] 얼어붙은 상태라면 아무 데도 갈 수 없음! (빈 리스트 반환)
+            // 존야 상태일 경우 이동 불가능
             if (IsFrozen) return positions;
 
             // 상, 하, 좌, 우 및 대각선 포함 8방향 정의
@@ -45,7 +46,7 @@ namespace CardChess.Pieces
                 string wallKey = $"{nextRow},{nextCol}";
                 if (state.ActiveWalls != null && state.ActiveWalls.ContainsKey(wallKey))
                 {
-                    // 이 칸에 벽이 있으면 '이 칸만' 스킵하고, 다음 방향(i+1)을 계속 검사합니다.
+                    // 이 칸에 벽이 있으면 '이 칸만' 스킵하고, 다음 방향을 계속 검사
                     continue;
                 }
                 // 보드 안에 있고, 아군 기물만 없다면 이동/공격 가능
