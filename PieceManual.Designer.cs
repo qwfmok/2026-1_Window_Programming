@@ -185,8 +185,7 @@
             // 
             // PieceManual
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1578, 844);
             this.Controls.Add(this.btnBack);
             this.Controls.Add(this.rtbDescription);

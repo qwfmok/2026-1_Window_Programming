@@ -30,6 +30,50 @@ namespace CardChess
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "설명서 메인 메뉴";
             this.DoubleBuffered = true; // 깜빡임 방지
+            this.BackgroundImageLayout = ImageLayout.Stretch;
+            // 설정 에셋 이미지 버튼 추가
+            Button btnSettings = new Button();
+            btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
+            btnSettings.Location = new Point(20, 20); // 좌측 상단
+            btnSettings.Cursor = Cursors.Hand;
+
+            // 버튼 뼈대(테두리, 클릭 시 효과 등) 투명화
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnSettings.BackColor = Color.Transparent;
+
+            // btn_settings.png 이미지 씌우기
+            try
+            {
+                string settingsImgPath = Path.Combine(Application.StartupPath, "Assets", "btn_settings.png");
+                if (File.Exists(settingsImgPath))
+                {
+                    btnSettings.BackgroundImage = Image.FromFile(settingsImgPath);
+                    btnSettings.BackgroundImageLayout = ImageLayout.Zoom; // 비율 유지하며 꽉 채우기
+                }
+                else
+                {
+                    // 혹시라도 이미지를 못 찾을 경우를 대비한 텍스트 임시 출력
+                    btnSettings.Text = "⚙️ 설정";
+                    btnSettings.ForeColor = Color.White;
+                }
+            }
+            catch { }
+
+            // 버튼 클릭 시 로비용 설정창 활성화
+            btnSettings.Click += (s, e) =>
+            {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, false, null))
+                {
+                    settings.ShowDialog();
+                }
+            };
+
+            this.Controls.Add(btnSettings);
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
 
             LoadGameAssets();
             ApplyButtonImages(); // 버튼에 이미지를 씌우는 로직 호출

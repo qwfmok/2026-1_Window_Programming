@@ -28,27 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.btnBack = new System.Windows.Forms.Button();
             this.rtbDescription = new System.Windows.Forms.RichTextBox();
             this.picTop = new System.Windows.Forms.PictureBox();
             this.picBottom = new System.Windows.Forms.PictureBox();
             this.btnRuleControl = new System.Windows.Forms.Button();
             this.btnRuleTurn = new System.Windows.Forms.Button();
             this.btnRuleBasic = new System.Windows.Forms.Button();
+            this.btnBack = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.picTop)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picBottom)).BeginInit();
             this.SuspendLayout();
-            // 
-            // btnBack
-            // 
-            this.btnBack.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnBack.Location = new System.Drawing.Point(1476, 47);
-            this.btnBack.Name = "btnBack";
-            this.btnBack.Size = new System.Drawing.Size(90, 40);
-            this.btnBack.TabIndex = 26;
-            this.btnBack.Text = "뒤로가기";
-            this.btnBack.UseVisualStyleBackColor = true;
-            this.btnBack.Click += new System.EventHandler(this.btnBack_Click);
             // 
             // rtbDescription
             // 
@@ -110,20 +99,30 @@
             this.btnRuleBasic.UseVisualStyleBackColor = true;
             this.btnRuleBasic.Click += new System.EventHandler(this.btnRuleBasic_Click);
             // 
+            // btnBack
+            // 
+            this.btnBack.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnBack.Location = new System.Drawing.Point(1447, 45);
+            this.btnBack.Name = "btnBack";
+            this.btnBack.Size = new System.Drawing.Size(90, 40);
+            this.btnBack.TabIndex = 33;
+            this.btnBack.Text = "뒤로가기";
+            this.btnBack.UseVisualStyleBackColor = true;
+            this.btnBack.Click += new System.EventHandler(this.btnBack_Click);
+            // 
             // GameManual
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1578, 844);
+            this.Controls.Add(this.btnBack);
             this.Controls.Add(this.btnRuleControl);
             this.Controls.Add(this.btnRuleTurn);
             this.Controls.Add(this.btnRuleBasic);
             this.Controls.Add(this.picBottom);
             this.Controls.Add(this.picTop);
             this.Controls.Add(this.rtbDescription);
-            this.Controls.Add(this.btnBack);
             this.Name = "GameManual";
-            this.Text = "GameManual";
+            this.Text = "게임 설명";
             ((System.ComponentModel.ISupportInitialize)(this.picTop)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picBottom)).EndInit();
             this.ResumeLayout(false);
@@ -131,13 +130,12 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.Button btnBack;
         private System.Windows.Forms.RichTextBox rtbDescription;
         private System.Windows.Forms.PictureBox picTop;
         private System.Windows.Forms.PictureBox picBottom;
         private System.Windows.Forms.Button btnRuleControl;
         private System.Windows.Forms.Button btnRuleTurn;
         private System.Windows.Forms.Button btnRuleBasic;
+        private System.Windows.Forms.Button btnBack;
     }
 }

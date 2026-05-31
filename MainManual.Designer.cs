@@ -36,9 +36,9 @@
             // 
             // btnPieceManual
             // 
-            this.btnPieceManual.Location = new System.Drawing.Point(600, 150);
+            this.btnPieceManual.Location = new System.Drawing.Point(667, 149);
             this.btnPieceManual.Name = "btnPieceManual";
-            this.btnPieceManual.Size = new System.Drawing.Size(400, 100);
+            this.btnPieceManual.Size = new System.Drawing.Size(445, 142);
             this.btnPieceManual.TabIndex = 0;
             this.btnPieceManual.Text = "기물 설명";
             this.btnPieceManual.UseVisualStyleBackColor = true;
@@ -46,9 +46,9 @@
             // 
             // btnCardManual
             // 
-            this.btnCardManual.Location = new System.Drawing.Point(600, 350);
+            this.btnCardManual.Location = new System.Drawing.Point(667, 349);
             this.btnCardManual.Name = "btnCardManual";
-            this.btnCardManual.Size = new System.Drawing.Size(400, 100);
+            this.btnCardManual.Size = new System.Drawing.Size(445, 142);
             this.btnCardManual.TabIndex = 1;
             this.btnCardManual.Text = "카드 설명";
             this.btnCardManual.UseVisualStyleBackColor = true;
@@ -56,9 +56,9 @@
             // 
             // btnGameManual
             // 
-            this.btnGameManual.Location = new System.Drawing.Point(600, 550);
+            this.btnGameManual.Location = new System.Drawing.Point(667, 549);
             this.btnGameManual.Name = "btnGameManual";
-            this.btnGameManual.Size = new System.Drawing.Size(400, 100);
+            this.btnGameManual.Size = new System.Drawing.Size(445, 142);
             this.btnGameManual.TabIndex = 2;
             this.btnGameManual.Text = "게임 설명";
             this.btnGameManual.UseVisualStyleBackColor = true;
@@ -77,8 +77,7 @@
             // 
             // MainManual
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1578, 844);
             this.Controls.Add(this.btnBack);
             this.Controls.Add(this.btnGameManual);

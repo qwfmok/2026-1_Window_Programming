@@ -79,15 +79,14 @@
             // 
             // CardManual
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1578, 844);
             this.Controls.Add(this.listBoxCards);
             this.Controls.Add(this.btnBack);
             this.Controls.Add(this.rtbDescription);
             this.Controls.Add(this.picCard);
             this.Name = "CardManual";
-            this.Text = "CardManual";
+            this.Text = "카드 설명";
             ((System.ComponentModel.ISupportInitialize)(this.picCard)).EndInit();
             this.ResumeLayout(false);
 
