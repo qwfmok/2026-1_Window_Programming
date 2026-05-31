@@ -12,9 +12,8 @@ namespace CardChess.Cards
     {
         public string Name { get; set; }
         public string Description { get; set; }
-        public int Cost { get; set; }
         public CardType Type => CardType.Evolution;
-        public PieceType EvolutionTarget { get; set; } // 룩, 나이트, 비숍 중 하나
+        public PieceType EvolutionTarget { get; set; }
         public EvolutionCard(string name, string description, PieceType target)
         {
             Name = name;
@@ -24,12 +23,12 @@ namespace CardChess.Cards
         public bool CanUse(Position targetPos, GameState state)
         {
             var piece = state.GetPieceAt(targetPos);
-            // 내 기물이면서 폰인 경우에만 진화 가능
-            return piece != null &&
-                   piece.Owner == state.CurrentTurn &&
-                   piece.Type == PieceType.Pawn;
+
+            // 현재 좌표에 해당 플레이어가 주인이 되는 폰이 존재하는지 검사
+            return piece != null && piece.Owner == state.CurrentTurn && piece.Type == PieceType.Pawn;
         }
 
+        // 재정의할 기물의 타입을 받아 대상의 위치에서 대체하는 것으로 진화 구현
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
             state.ReplacePiece(targetPos, EvolutionTarget);

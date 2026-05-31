@@ -14,42 +14,38 @@ namespace CardChess.Cards
         public string Name { get; set; }
         public string Description { get; set; }
         public CardType Type => CardType.FieldSkill;
-
-        // 필드물(벽 등)이 유지될 턴 수
         public int Duration { get; set; } = 2;
         public FieldSkillCard(string name, string description)
         {
             Name = name;
             Description = description;
 
-            // 카드별로 턴 제한이 다르면 여기서 세팅 가능
+            // --- 필드 개입형 카드 중 지속 시간을 고려해야 하는 카드의 지속 시간 ---
             if (name == "방벽 건설")
             {
                 Duration = 2;
             }  
         }
 
-        public bool CanUse(Position targetPos, GameState state) // 정우가 수정
+        public bool CanUse(Position targetPos, GameState state)
         {
-            // 해당 칸이 비어있어야 설치 가능
+            // 보드 바깥 또는 해당 위치에 장애물이 존재하는지 검사하여 조건에 부합하지 않으면 발동 불가 처리
             if (!state.IsWithinBoard(targetPos) || state.GetPieceAt(targetPos) != null)
             {
                 return false;
             }
 
-            // '폰 소환' 카드일 경우에만 아군 진영인지 추가로 검사
+            // 증원 카드는 아군 진영(Row 기준 상하 절반)에서만 발동 가능
             if (Name == "증원")
             {
                 PlayerType myPlayer = state.CurrentTurn;
 
                 if (myPlayer == PlayerType.Player1)
                 {
-                    // 1P 진영: 보드판 아래쪽 절반 (Row 4 ~ 7)
                     return targetPos.Row >= 4 && targetPos.Row <= 7;
                 }
                 else
                 {
-                    // 2P 진영: 보드판 위쪽 절반 (Row 0 ~ 3)
                     return targetPos.Row >= 0 && targetPos.Row <= 3;
                 }
             }
@@ -57,6 +53,7 @@ namespace CardChess.Cards
             return true;
         }
 
+        // 필드 개입형 카드 효과 처리부
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
             if (Name == "방벽 건설")

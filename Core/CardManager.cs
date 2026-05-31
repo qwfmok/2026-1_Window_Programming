@@ -4,6 +4,11 @@ using System.Linq;
 using CardChess.Models;
 using CardChess.Cards;
 
+/// 덱 로직 구현은 여기서
+
+/// 카드명 변경의 경우에는 이 덱 부분에서 관리한 후
+/// 해당 카드의 타입에 맞는 클래스와 Main Form의 딕셔너리에서도 관리하여 파일명과 꼬이지 않도록 해야 함
+
 namespace CardChess.Core
 {
     public class CardManager
@@ -22,7 +27,6 @@ namespace CardChess.Core
             _state.SharedRandom = _random;
             List<ICard> deckList = new List<ICard>();
 
-            // 40장을 맞추기 위해 전체 카드 세트를 2번 반복해서 넣습니다 (총 42장)
             for (int loop = 0; loop < 2; loop++)
             {
                 for (int i = 0; i < 3; i++)
@@ -48,10 +52,8 @@ namespace CardChess.Core
                 deckList.Add(new TrapCard("랜덤 방어", "50% 확률로 공격 반사 및 파괴"));
             }
 
-            // 섞기 (셔플)
+            // 덱 셔플 후 공용 덱으로 지정
             var shuffled = deckList.OrderBy(x => _random.Next()).ToList();
-
-            // 공용 덱에 밀어넣기
             _state.SharedDeck.Clear();
             foreach (var card in shuffled)
             {
@@ -70,11 +72,12 @@ namespace CardChess.Core
                 return;
             }
 
-            // 🌟 [추가] 덱을 다 썼는데 무덤에 카드가 있다면? 무덤을 섞어서 다시 덱으로!
+            // 탈진 로직 | 덱 잔량이 0이라면 버려진 카드들로 덱 재구성
             if (_state.SharedDeck.Count == 0 && _state.DiscardPile.Count > 0)
             {
                 MainForm.Instance.AddLog("덱을 모두 소모하여 무덤의 카드를 다시 섞습니다!");
-                // 공용 주사위로 무덤 섞기
+
+                // 무덤 셔플
                 var shuffled = _state.DiscardPile.OrderBy(x => _state.SharedRandom.Next()).ToList();
                 _state.DiscardPile.Clear();
                 foreach (var c in shuffled) _state.SharedDeck.Push(c);
@@ -98,6 +101,7 @@ namespace CardChess.Core
                 DrawCard(player);
             }
         }
+
         public void UseCard(ICard card, Position targetPos, PlayerType player)
         {
             if (card == null) return;
@@ -107,7 +111,7 @@ namespace CardChess.Core
                 if (_state.Hands.ContainsKey(player))
                 {
                     _state.Hands[player].Remove(card);
-                    _state.DiscardPile.Add(card); // 다 쓴 카드를 허공에 버리지 않고 무덤에 감
+                    _state.DiscardPile.Add(card); // 다 쓴 카드를 허공에 버리지 않고 무덤에 감 *****
                 }
             }
         }

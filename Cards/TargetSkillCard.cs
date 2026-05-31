@@ -30,38 +30,33 @@ namespace CardChess.Cards
             switch (Name)
             {
                 case "부활":
-                    // 반드시 기물이 없는 '빈칸'이어야 함
-                    if (piece != null) return false;
+                    // 기물이 없는 빈 칸이 아니라면 발동 불가 처리
+                    if (piece != null)
+                        return false;
 
-                    // 지정한 좌표(targetPos)가 내 진영인지 검사
-                    // (가정: Player1은 보드 아래쪽 4~7행, Player2는 보드 위쪽 0~3행을 사용)
+                    // 부활 카드는 아군 진영(Row 기준 상하 절반)에서만 발동 가능
                     if (myPlayer == PlayerType.Player1)
                     {
-                        // 1P 턴일 때는 찍은 칸의 Row가 4~7 사이일 때만 true(사용 가능) 반환
                         return targetPos.Row >= 4 && targetPos.Row <= 7;
                     }
                     else
                     {
-                        // 2P 턴일 때는 찍은 칸의 Row가 0~3 사이일 때만 true 반환
                         return targetPos.Row >= 0 && targetPos.Row <= 3;
                     }
                 case "기물 뺏기":
-                    // 기본 검증: 찍은 칸에 기물이 있어야 하고, 내 기물이 아니어야 함 (상대 기물 타겟 필수)
+                    // 해당 좌표에 기물의 존재와 소유권 검증 후 아니라면 발동 불가 처리 | 킹과 퀸은 밸런스 문제로 탈취 불가능
                     if (piece == null || piece.Owner == myPlayer)
                     {
                         return false;
                     }
-
-                    // 밸런스 제한: 킹과 퀸은 컨트롤을 탈취할 수 없음
                     if (piece.Type == PieceType.King || piece.Type == PieceType.Queen)
                     {
                         return false;
                     }
 
-                    // 위치 제한: 상대방의 가장 깊숙한 뒷줄 1~2열은 조종 불가
+                    // First Turn Kill을 막기 위해 상대방 본진 내부라면 발동 불가능
                     if (myPlayer == PlayerType.Player1)
                     {
-                        // 1P가 쓸 때: 2P의 최상단 뒷줄인 Row 0, Row 1 이면 사용 불가(false)
                         if (targetPos.Row == 0 || targetPos.Row == 1)
                         {
                             return false;
@@ -69,31 +64,28 @@ namespace CardChess.Cards
                     }
                     else
                     {
-                        // 2P가 쓸 때: 1P의 최하단 뒷줄인 Row 7, Row 6 이면 사용 불가(false)
                         if (targetPos.Row == 7 || targetPos.Row == 6)
                         {
                             return false;
                         }
                     }
 
-                    // 위의 모든 까다로운 방어 조건을 다 통과했다면 사용 가능
                     return true;
 
-                //  순수하게 '내 기물' 전체(킹 포함)에 쓸 수 있는 스킬들
+                // 자신의 기물인지 검증 후 조건 내에서 즉시 발동할 수 있는 카드
                 case "위치 교환":
                 case "방어막":
                 case "유체화":
                 case "봉인": 
                     return piece != null && piece.Owner == myPlayer;
 
-                // '내 기물' + '주변 빈칸'이 필요한 스킬
+                // 소유권 및 주변 좌표의 상태 영향을 받아 발동할 수 있는 카드
                 case "복제":
                     if (piece == null || piece.Owner != myPlayer) return false;
                     return GetAdjacentEmptyPositions(targetPos, state).Count > 0;
 
-                // '내 기물'이지만 '킹은 제외'해야 하는 스킬
+                // 소유권 및 기물의 타입에 영향을 받아 발동할 수 있는 카드
                 case "랜덤 진화":
-                    // 판도라로 내 킹을 변이시키면 게임이 터지므로 킹은 제외!
                     return piece != null && piece.Owner == myPlayer && piece.Type != PieceType.King;
 
                 default:
@@ -113,6 +105,7 @@ namespace CardChess.Cards
                 return;
             }
 
+            // --- 대상 지정형 카드의 효과 처리부 ---
             switch (Name)
             {
                 case "방어막":
@@ -131,14 +124,13 @@ namespace CardChess.Cards
                     break;
 
                 case "유체화":
-                    // 현재 위치를 그림자(원래 위치)로 기억하고, 지속 턴을 2턴으로 설정
                     targetPiece.ShadowPosition = new Position(targetPos.Row, targetPos.Col);
                     targetPiece.ShadowTurns = 2;
                     MainForm.Instance.AddLog($"[{Name}] 영혼 해방 발동! 2턴 후 {targetPos.Row},{targetPos.Col}로 다시 돌아옵니다.");
                     break;
 
+                // 보드 내부에서 두 기물의 위치를 확인한 후 내부 좌표를 스왑하는 방식으로 구현
                 case "위치 교환":
-                    // 내 기물 중 킹이 아니고 타겟이 아닌 기물들을 찾아 랜덤으로 하나 고름
                     var allyPieces = GetAllPieces(state).Where(p => p.Owner == myPlayer && p.Type != PieceType.King && p != targetPiece).ToList();
                     if (allyPieces.Count > 0)
                     {
@@ -146,17 +138,17 @@ namespace CardChess.Cards
                         Position pos1 = targetPiece.CurrentPosition;
                         Position pos2 = swapTarget.CurrentPosition;
 
-                        // 보드판 및 기물 내부 좌표 크로스 스왑
                         state.SetPieceAt(pos1, swapTarget);
                         state.SetPieceAt(pos2, targetPiece);
+
                         swapTarget.CurrentPosition = pos1;
                         targetPiece.CurrentPosition = pos2;
                         MainForm.Instance.AddLog($"[{Name}] 두 기물이 서로의 위치를 바꿉니다.");
                     }
                     break;
 
+                // 대상 기물에 인접한 빈칸을 검사하여 동일한 객체를 생성
                 case "복제":
-                    // 타겟 기물 주변의 빈칸 탐색
                     var emptyAdj = GetAdjacentEmptyPositions(targetPos, state);
                     if (emptyAdj.Count > 0)
                     {
@@ -167,8 +159,8 @@ namespace CardChess.Cards
                     }
                     break;
 
+                // 배열 내부에 진화체가 될 기물을 정의하고 무작위로 결정하여 새 객체로 지정한 후 대상 기물의 소유자와 위치 정보를 대입하여 구현
                 case "랜덤 진화":
-                    // 현재 기물을 파괴하고 랜덤한 새 기물로 변경 (킹 제외)
                     PieceType[] pandoraTypes = { PieceType.Pawn, PieceType.Knight, PieceType.Bishop, PieceType.Rook, PieceType.Queen };
                     PieceType newType = pandoraTypes[rand.Next(pandoraTypes.Length)];
 
@@ -177,21 +169,16 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog($"[{Name}] 판도라의 상자가 열려 {newType} 기물로 변이했습니다!");
                     break;
 
+                //
                 case "부활":
-                    // 내 무덤 리스트 가져오기
                     var myGraveyard = (myPlayer == PlayerType.Player1) ? state.Player1DeadPieces : state.Player2DeadPieces;
 
                     if (myGraveyard.Count > 0)
                     {
-                        // 💡 가장 마지막에 죽은 기물을 꺼냅니다. 
-                        // (원한다면 rand.Next()를 써서 무덤 속 기물 중 랜덤으로 살릴 수도 있습니다)
                         int lastIndex = myGraveyard.Count - 1;
                         PieceType resurrectedType = myGraveyard[lastIndex];
-
-                        // 부활시킬 거니까 무덤 리스트에서는 삭제 (Pop)
                         myGraveyard.RemoveAt(lastIndex);
 
-                        // 실제 기물 생성 및 보드 배치
                         IPiece resPiece = CreatePiece(resurrectedType, myPlayer, targetPos);
                         state.SetPieceAt(targetPos, resPiece);
                         MainForm.Instance.AddLog($"[{Name}] 빈칸에 {resurrectedType} 기물이 성공적으로 부활했습니다!");

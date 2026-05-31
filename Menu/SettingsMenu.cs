@@ -12,7 +12,7 @@ namespace CardChess.Menu
         private bool isInGame;
         private UDPprotocol udp;
 
-        // 🌟 BGM이 켜져 있는지 꺼져 있는지 기억하는 변수 (창을 닫아도 유지됨)
+        // 배경음악 온오프 관련
         private static bool isBgmOn = true;
 
         public SettingsMenu(Form parent, bool inGame, UDPprotocol udpProtocol = null)
@@ -21,7 +21,7 @@ namespace CardChess.Menu
             this.isInGame = inGame;
             this.udp = udpProtocol;
 
-            // 설정창 기본 세팅
+            // 환경 설정 UI 기본값 세팅
             this.Text = "환경 설정";
             this.Size = new Size(400, 440);
             this.StartPosition = FormStartPosition.CenterParent;
@@ -29,7 +29,6 @@ namespace CardChess.Menu
             this.MaximizeBox = false;
             this.MinimizeBox = false;
 
-            // 🌟 메인 화면 배경 가져다 쓰기 (글자 없는 깔끔한 배경 사용)
             try
             {
                 string bgPath = Path.Combine(Application.StartupPath, "Assets", "bg_remove_text.png");
@@ -40,7 +39,7 @@ namespace CardChess.Menu
                 }
                 else
                 {
-                    this.BackColor = Color.FromArgb(40, 40, 40); // 실패 시 다크 테마
+                    this.BackColor = Color.FromArgb(40, 40, 40);
                 }
             }
             catch { }
@@ -53,7 +52,7 @@ namespace CardChess.Menu
             int currentY = 25;
             int gap = 65;
 
-            // 1. 전체화면 / 창모드 전환 버튼
+            // 전체화면 및 창모드 전환 버튼
             Button btnScreen = CreateImageButton("button_long_screen_change.png", "전체화면 / 창모드", currentY);
             currentY += gap;
             btnScreen.Click += (s, e) =>
@@ -76,7 +75,7 @@ namespace CardChess.Menu
                 }
             };
 
-            // 2. BGM 끄기 / 켜기 버튼 (이미지 동적 전환)
+            // 배경음악 온오프 관리 버튼
 
             string initialBgmImg = isBgmOn ? "button_long_bgm_off.png" : "button_long_bgm_on.png";
             Button btnSound = CreateImageButton(initialBgmImg, isBgmOn ? "BGM 끄기" : "BGM 켜기", currentY);
@@ -98,14 +97,12 @@ namespace CardChess.Menu
                 }
             };
 
-            // 3. 항복 버튼 (게임 중일 때만 표시)
+            // 서렌더 버튼으로 이벤트 발생 시 상대방에게 패킷 송신 후 게임 종료 | 마우스 올리면 텍스트 노출
             if (isInGame)
             {
-                // 텍스트를 "항복"으로 간결하게 변경
                 Button btnLobby = CreateImageButton("button_long_surrender.png", "항복", currentY);
                 currentY += gap;
 
-                // 마우스를 올렸을 때 부가 설명(Tooltip) 표시
                 ToolTip toolTip = new ToolTip();
                 toolTip.SetToolTip(btnLobby, "메인 화면으로 돌아가며 패배 처리됩니다.");
 
@@ -121,12 +118,12 @@ namespace CardChess.Menu
                 };
             }
 
-            // 4. 닫기 버튼
+            // 설정 창 폼 닫기 버튼
             Button btnClose = CreateImageButton("button_long_close_menu.png", "닫기", currentY);
             currentY += gap;
             btnClose.Click += (s, e) => this.Close();
 
-            // 5. 마스터 볼륨 조절
+            // 배경음악 볼륨을 트랙바 형태에 묶어서 음량 조절
             currentY += 10;
 
             Label lblMasterVol = CreateLabel($"🔊 게임 음량: {(int)(SoundsManager.MasterVolume * 100)}%", currentY);
@@ -141,14 +138,13 @@ namespace CardChess.Menu
             this.ClientSize = new Size(this.ClientSize.Width, currentY + 120);
         }
 
-        // 이미지 버튼 생성기
+        // 기본 윈도우 폼 버튼 속성
         private Button CreateImageButton(string imgName, string fallbackText, int yPos)
         {
             Button btn = new Button();
             btn.Size = new Size(260, 50);
             btn.Location = new Point((this.ClientSize.Width - 260) / 2, yPos);
 
-            // 이미지 버튼의 배경/테두리 투명화 처리
             btn.FlatStyle = FlatStyle.Flat;
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseDownBackColor = Color.Transparent;
@@ -162,7 +158,7 @@ namespace CardChess.Menu
             return btn;
         }
 
-        // 버튼 이미지 갈아끼우기 (BGM 토글 등에서 재사용)
+        // 버튼에 이미지를 덧씌운 후 텍스트 제거 | 이미지가 없으면 텍스트를 노출
         private void UpdateImageButton(Button btn, string imgName, string fallbackText)
         {
             string imgPath = Path.Combine(Application.StartupPath, "Assets", imgName);
@@ -170,11 +166,10 @@ namespace CardChess.Menu
             {
                 btn.BackgroundImage = Image.FromFile(imgPath);
                 btn.BackgroundImageLayout = ImageLayout.Zoom;
-                btn.Text = ""; // 이미지가 정상 로드되면 텍스트 제거
+                btn.Text = "";
             }
             else
             {
-                // 이미지가 없을 때를 대비한 텍스트 렌더링
                 btn.Text = fallbackText;
                 btn.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
                 btn.ForeColor = Color.White;
@@ -182,12 +177,13 @@ namespace CardChess.Menu
             }
         }
 
-        // 픽쳐박스 안전 로드 (타이틀용)
-        private void LoadImageSafe(PictureBox pic, string imgName)
-        {
-            string imgPath = Path.Combine(Application.StartupPath, "Assets", imgName);
-            if (File.Exists(imgPath)) pic.Image = Image.FromFile(imgPath);
-        }
+        //private void LoadImageSafe(PictureBox pic, string imgName)
+        //{
+        //    string imgPath = Path.Combine(Application.StartupPath, "Assets", imgName);
+        //    if (File.Exists(imgPath)) pic.Image = Image.FromFile(imgPath);
+        //}
+
+        // 볼륨 조절용 라벨 및 트랙바 속성값
 
         private Label CreateLabel(string text, int yPos)
         {
@@ -217,7 +213,5 @@ namespace CardChess.Menu
             this.Controls.Add(track);
             return track;
         }
-        
-
     }
 }

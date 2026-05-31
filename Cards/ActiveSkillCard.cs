@@ -12,38 +12,41 @@ namespace CardChess.Cards
     {
         public string Name { get; set; }
         public string Description { get; set; }
-        public int Cost { get; set; }
+
+        // 레거시 코드: 첫 기획 상 '코스트' 개념은 현재 버전에서 재미 및 템포 상승을 위해 구현하지 않기로 결정
+        //public int Cost { get; set; }
         public CardType Type => CardType.ActiveSkill;
         public ActiveSkillCard(string name, string description)
         {
             Name = name;
             Description = description;
         }
-        // Active 스킬은 보드의 위치와 상관없이 항상 사용 가능함
-        public bool CanUse(Position targetPos, GameState state) => true;
+
+        // 액티브 스킬은 보드의 위치와 관계없이 항시 발동 가능하도록
+        public bool CanUse(Position targetPos, GameState state) => true; // 액티브 스킬은 보드의 위치와 관계없이 항시 발동 가능하도록
 
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
-            // 실제 효과는 이 클래스를 상속받은 개별 카드나 
-            // 여기서 분기 처리를 통해 구현합니다.
             if (Name == "두장 뽑기")
             {
                 cardManager.DrawMultiple(state.CurrentTurn, 2);
                 MainForm.Instance.AddLog($"[두장 뽑기] {state.CurrentTurn}가 카드를 2장 뽑습니다.");
             }
+
+            // 손패 교환 카드를 소모하는 것을 핸드의 카운트 -1로 구현
             else if (Name == "손패 교환")
             {
                 PlayerType myPlayer = state.CurrentTurn;
                 if (state.Hands.ContainsKey(myPlayer))
                 {
                     int myDrawCount = state.Hands[myPlayer].Count - 1;
-                    // 🌟 내 손패를 허공에 버리지 않고 전부 무덤으로 밀어넣기
                     state.DiscardPile.AddRange(state.Hands[myPlayer]);
                     state.Hands[myPlayer].Clear();
                     if (myDrawCount > 0) cardManager.DrawMultiple(myPlayer, myDrawCount);
                 }
                 MainForm.Instance.AddLog($"[손패 교환] 발동! {state.CurrentTurn}가 손패를 모두 버리고 새로 뽑았습니다.");
             }
+
             else if (Name == "카드 뺏기")
             {
                 PlayerType myPlayer = state.CurrentTurn;
@@ -51,7 +54,6 @@ namespace CardChess.Cards
 
                 if (state.Hands.ContainsKey(enemyPlayer) && state.Hands[enemyPlayer].Count > 0)
                 {
-                    // 상대방 손패 중 랜덤으로 한 장 선택 (또는 UI에서 전달받은 특정 인덱스 사용)
                     int targetCardIndex = state.SharedRandom.Next(0, state.Hands[enemyPlayer].Count);
 
                     // 만약 "지정해서 뺏기"를 구현하고 싶다면, targetPos.Col 등에 인덱스를 담아왔다고 가정하고 처리 가능:
@@ -59,13 +61,10 @@ namespace CardChess.Cards
 
                     ICard stolenCard = state.Hands[enemyPlayer][targetCardIndex];
 
-                    // 내 손패 제한(8장)이 있다면 체크 로직 추가 가능
+                    // 핸드 8장 미만인지 검사 후 상대 플레이어에게서 강탈 구현
                     if (state.Hands[myPlayer].Count < 8)
                     {
-                        // 상대 손패에서 제거
                         state.Hands[enemyPlayer].RemoveAt(targetCardIndex);
-
-                        // 내 손패에 추가
                         state.Hands[myPlayer].Add(stolenCard);
 
                         MainForm.Instance.AddLog($"{myPlayer}가 {enemyPlayer}의 패에서 [{stolenCard.Name}] 카드를 탈취했습니다!");
@@ -80,11 +79,10 @@ namespace CardChess.Cards
                     MainForm.Instance.AddLog("상대방의 손패가 비어있어 카드를 뺏을 수 없습니다.");
                 }
             }
+
             else if (Name == "시간 왜곡")
             {
                 PlayerType myPlayer = state.CurrentTurn;
-
-                // GameState에 한 번 더 행동할 수 있는 권한을 부여합니다.
                 state.IsExtraTurnGranted = true;
 
                 MainForm.Instance.AddLog($"{myPlayer}가 [시간 왜곡] 카드를 발동! 다음 상대방의 턴이 스킵됩니다.");
@@ -93,25 +91,22 @@ namespace CardChess.Cards
             {
                 PlayerType myPlayer = state.CurrentTurn;
                 
-
-                // 덱에 카드가 최소 2장 이상 있는지 확인
+                // 덱 잔량 2매 이상인지 검사 후 랜덤실행 카드를 발동
                 if (state.SharedDeck.Count >= 2)
                 {
                     MainForm.Instance.AddLog($"[랜덤 시전] 발동! {myPlayer}의 덱에서 카드를 2장 뽑아 즉시 시전합니다.");
 
                     for (int i = 0; i < 2; i++)
                     {
-                        // 손패(Hands)로 옮기지 않고, 덱에서 바로 카드를 꺼냅니다.
                         ICard randomCard = state.SharedDeck.Pop();
                         state.DiscardPile.Add(randomCard);
-                        // 이 카드가 타겟이 필요한 카드일 경우를 대비해 무작위 좌표를 하나 생성합니다.
-                        // (체스판이 8x8이므로 0~7 사이의 무작위 row, col)
+
+                        // 타겟이 필요한 카드일 경우를 대비하여 무작위 좌표 지정
                         Position randomPos = new Position(state.SharedRandom.Next(0, 8), state.SharedRandom.Next(0, 8));
 
-                        // 만약 '진화 카드'가 뽑혔다면 폰이 있는 좌표를 찾아서 넣어주면 더 자연스럽습니다.
+                        // 보드 전체를 순회하면서 폰 탐색
                         if (randomCard.Type == CardType.Evolution)
                         {
-                            // 보드 전체를 돌며 현재 플레이어의 '폰'이 있는 위치를 탐색
                             var pawns = new List<Position>();
                             for (int r = 0; r < 8; r++)
                             {
@@ -124,14 +119,12 @@ namespace CardChess.Cards
                                     }
                                 }
                             }
-                            // 만약 폰이 필드에 있다면, 그 중 하나의 좌표를 타겟으로 지정
                             if (pawns.Count > 0)
                             {
                                 randomPos = pawns[state.SharedRandom.Next(0, pawns.Count)];
                             }
                         }
 
-                        // 카드 자체의 Execute를 즉시 실행! (CardManager는 인자로 받은 것 그대로 배달)
                         MainForm.Instance.AddLog($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
                         randomCard.Execute(randomPos, state, cardManager);
                     }
