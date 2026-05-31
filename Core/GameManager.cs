@@ -85,7 +85,7 @@ namespace CardChess.Core
                 {
                     if (targetPiece.IsFrozen)
                     {
-                        errorMessage = "대상은 존야 상태이므로 공격할 수 없습니다!";
+                        errorMessage = "대상은 봉인 상태이므로 공격할 수 없습니다!";
                         return false;
                     }
 
@@ -245,9 +245,15 @@ namespace CardChess.Core
                         }
                     }
 
-                    if (piece.IsFrozen && piece.Owner == State.CurrentTurn)
+                    if (piece.IsFrozen)
                     {
-                        piece.IsFrozen = false;
+                        piece.FrozenTurns--; // 턴이 지날 때마다 얼음 수명을 1씩 깎음
+
+                        if (piece.FrozenTurns <= 0)
+                        {
+                            piece.IsFrozen = false;  // 수명이 다 되면 빙결 해제
+                            piece.FrozenTurns = 0;   // 안전장치
+                        }
                     }
                 }
             }

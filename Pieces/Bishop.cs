@@ -17,6 +17,7 @@ namespace CardChess.Pieces
         public PieceType Type => PieceType.Bishop;
         public bool HasShield { get; set; } = false;          // 신성한 보호막 (공격 1회 무시)
         public bool IsFrozen { get; set; } = false;           // 존야 (무적 및 이동/공격 불가)
+        public int FrozenTurns { get; set; } = 0;
         public Position? ShadowPosition { get; set; } = null;  // 영혼 해방 (돌아갈 원본 위치)
         public int ShadowTurns { get; set; } = 0;             // 영혼 해방 (남은 턴 수)
 

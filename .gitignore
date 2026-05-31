@@ -1,5 +1,6 @@
 ## [ Visual Studio ]
 .vs/
+[Bb]in/
 [Oo]bj/
 *.user
 *.userosscache
@@ -12,6 +13,7 @@
 *.pdb
 *.msi
 *.zip
+packages/
 
 ## [ Operating System ]
 Thumbs.db
