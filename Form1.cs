@@ -46,17 +46,38 @@ namespace CardChess
 
             LoadGameAssets();
             InitLobbyUI();
+            // 설정 에셋 이미지 버튼 추가
             Button btnSettings = new Button();
-            btnSettings.Text = "⚙️ 설정";
-            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
-            btnSettings.Size = new Size(100, 40);
-            btnSettings.Location = new Point(10, 10); // 좌측 상단 (10, 10) 위치
-            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
-            btnSettings.ForeColor = Color.White;
-            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
+            btnSettings.Location = new Point(20, 20); // 좌측 상단
             btnSettings.Cursor = Cursors.Hand;
 
-            // 버튼 클릭 시 로비용 설정창 활성화 (인게임이 아니므로 false, 네트워크는 null 전달)
+            // 버튼 뼈대(테두리, 클릭 시 효과 등) 투명화
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnSettings.BackColor = Color.Transparent;
+
+            // btn_settings.png 이미지 씌우기
+            try
+            {
+                string settingsImgPath = Path.Combine(Application.StartupPath, "Assets", "btn_settings.png");
+                if (File.Exists(settingsImgPath))
+                {
+                    btnSettings.BackgroundImage = Image.FromFile(settingsImgPath);
+                    btnSettings.BackgroundImageLayout = ImageLayout.Zoom; // 비율 유지하며 꽉 채우기
+                }
+                else
+                {
+                    // 혹시라도 이미지를 못 찾을 경우를 대비한 텍스트 임시 출력
+                    btnSettings.Text = "⚙️ 설정";
+                    btnSettings.ForeColor = Color.White;
+                }
+            }
+            catch { }
+
+            // 버튼 클릭 시 로비용 설정창 활성화
             btnSettings.Click += (s, e) =>
             {
                 CardChess.Menu.SoundsManager.Play("Menu_icon_select");

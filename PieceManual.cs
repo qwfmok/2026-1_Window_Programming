@@ -30,6 +30,7 @@ namespace CardChess
             this.Height = 900;
             this.DoubleBuffered = true;
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackgroundImageLayout = ImageLayout.Stretch;
             LoadGameAssets();
             // 폼이 처음 켜졌을 때는 기본으로 '폰' 탭을 띄워줍니다.
             LoadPieceData("Pawn");
@@ -38,6 +39,50 @@ namespace CardChess
             picTopRight.SizeMode = PictureBoxSizeMode.Zoom;
             picBottom.SizeMode = PictureBoxSizeMode.Zoom;
             ApplyButtonImages(); // 버튼에 이미지를 씌우는 로직 호출
+            // 설정 에셋 이미지 버튼 추가
+            Button btnSettings = new Button();
+            btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
+            btnSettings.Location = new Point(20, 20); // 좌측 상단
+            btnSettings.Cursor = Cursors.Hand;
+
+            // 버튼 뼈대(테두리, 클릭 시 효과 등) 투명화
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnSettings.BackColor = Color.Transparent;
+
+            // btn_settings.png 이미지 씌우기
+            try
+            {
+                string settingsImgPath = Path.Combine(Application.StartupPath, "Assets", "btn_settings.png");
+                if (File.Exists(settingsImgPath))
+                {
+                    btnSettings.BackgroundImage = Image.FromFile(settingsImgPath);
+                    btnSettings.BackgroundImageLayout = ImageLayout.Zoom; // 비율 유지하며 꽉 채우기
+                }
+                else
+                {
+                    // 혹시라도 이미지를 못 찾을 경우를 대비한 텍스트 임시 출력
+                    btnSettings.Text = "⚙️ 설정";
+                    btnSettings.ForeColor = Color.White;
+                }
+            }
+            catch { }
+
+            // 버튼 클릭 시 로비용 설정창 활성화
+            btnSettings.Click += (s, e) =>
+            {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, false, null))
+                {
+                    settings.ShowDialog();
+                }
+            };
+
+            this.Controls.Add(btnSettings);
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
+
         }
         private void LoadGameAssets()
         {
@@ -199,7 +244,7 @@ namespace CardChess
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 14f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
                     rtbDescription.AppendText("• 이동: 앞으로 딱 1칸만 전진할 수 있습니다. (단, 첫 이동 시에는 2칸 전진 가능)\n");
-                    rtbDescription.AppendText("• 공격: 대각선 앞쪽 1칸에 있는 적만 공격할 수 있습니다.\n");
+                    rtbDescription.AppendText("• 공격: 대각선 앞쪽 1칸에 있는 적만 공격할 수 있습니다.\n\n");
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 13f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.LightGreen; // 특수 능력 포인트 컬러
@@ -216,7 +261,7 @@ namespace CardChess
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 14f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 이동 및 공격: 알파벳 'L'자 모양(직선 2칸 이동 후 꺾어서 1칸)으로 이동하며, 도착 지점의 적을 공격합니다.\n");
+                    rtbDescription.AppendText("• 이동 및 공격: 알파벳 'L'자 모양(직선 2칸 이동 후 꺾어서 1칸)으로 이동하며, 도착 지점의 적을 공격합니다.\n\n");
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 13f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.LightSkyBlue;
@@ -257,7 +302,7 @@ namespace CardChess
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 14f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 이동 및 공격: 가로, 세로, 대각선 모든 방향으로 장애물이 없는 한 원하는 만큼 이동 및 공격할 수 있습니다.\n");
+                    rtbDescription.AppendText("• 이동 및 공격: 가로, 세로, 대각선 모든 방향으로 장애물이 없는 한 원하는 만큼 이동 및 공격할 수 있습니다.\n\n");
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 13f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.OrangeRed;
@@ -274,7 +319,7 @@ namespace CardChess
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 14f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 이동 및 공격: 가로, 세로, 대각선 모든 방향으로 딱 1칸씩만 이동 및 공격할 수 있습니다.\n");
+                    rtbDescription.AppendText("• 이동 및 공격: 가로, 세로, 대각선 모든 방향으로 딱 1칸씩만 이동 및 공격할 수 있습니다.\n\n");
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 13f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.OrangeRed;

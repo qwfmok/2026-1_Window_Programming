@@ -124,7 +124,6 @@ namespace CardChess
                 imgPlayareabg = Image.FromFile(playAreaBgPath);
             }
 
-            CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
             RelayoutUI();
 
             // 1-2. 턴 나타내는 버튼
@@ -195,7 +194,6 @@ namespace CardChess
             string cardBackPath = Path.Combine(Application.StartupPath, "Assets", "card_back.png");
             if (File.Exists(cardBackPath)) imgCardBack = Image.FromFile(cardBackPath);
 
-            CardChess.Menu.Surrender.AddSurrenderButton(this, this.udpProtocol);
             //UI들을 깔끔하게 강제 재배치하는 함수 호출
             RelayoutUI();
 
@@ -218,27 +216,50 @@ namespace CardChess
             _ = this.battleManager.ProcessNextPhase();
 
 
-            //  좌측 상단 환경 설정(톱니바퀴) 버튼 생성
+            // 설정 에셋 이미지 버튼 추가
             Button btnSettings = new Button();
-            btnSettings.Text = "⚙️ 설정";
-            btnSettings.Font = new Font("맑은 고딕", 12f, FontStyle.Bold);
-            btnSettings.Size = new Size(100, 40);
-            btnSettings.Location = new Point(10, 10);
-            btnSettings.BackColor = Color.FromArgb(40, 40, 40);
-            btnSettings.ForeColor = Color.White;
-            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
+            btnSettings.Location = new Point(10, 10); // 좌측 상단
             btnSettings.Cursor = Cursors.Hand;
 
-            // 버튼 클릭 시 방금 만든 SettingsMenu 팝업창을 띄움
+            // 버튼 뼈대(테두리, 클릭 시 효과 등) 투명화
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.Transparent;
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnSettings.BackColor = Color.Transparent;
+
+            // btn_settings.png 이미지 씌우기
+            try
+            {
+                string settingsImgPath = Path.Combine(Application.StartupPath, "Assets", "btn_settings.png");
+                if (File.Exists(settingsImgPath))
+                {
+                    btnSettings.BackgroundImage = Image.FromFile(settingsImgPath);
+                    btnSettings.BackgroundImageLayout = ImageLayout.Zoom; // 비율 유지하며 꽉 채우기
+                }
+                else
+                {
+                    // 혹시라도 이미지를 못 찾을 경우를 대비한 텍스트 임시 출력
+                    btnSettings.Text = "⚙️ 설정";
+                    btnSettings.ForeColor = Color.White;
+                }
+            }
+            catch { }
+
+            // 버튼 클릭 시 로비용 설정창 활성화
             btnSettings.Click += (s, e) =>
             {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
                 using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, true, this.udpProtocol))
                 {
                     settings.ShowDialog();
                 }
             };
+
             this.Controls.Add(btnSettings);
-            btnSettings.BringToFront();
+            btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
+
 
             // 채팅창 세팅
             txtChatInput = new TextBox();
@@ -266,12 +287,12 @@ namespace CardChess
 
             if (currentTurn == PlayerType.Player1)
             {
-                btnPassTurn.Text = "1P TURN (턴 종료)";
+                btnPassTurn.Text = "Player 1's TURN";
                 btnPassTurn.ForeColor = Color.LightSkyBlue;
             }
             else
             {
-                btnPassTurn.Text = "2P TURN (턴 종료)";
+                btnPassTurn.Text = "Player 2's TURN";
                 btnPassTurn.ForeColor = Color.LightCoral;
             }
 
@@ -495,9 +516,12 @@ namespace CardChess
             pnlPlayArea.BackColor = Color.Transparent;
             pnlPlayArea.BorderStyle = BorderStyle.None;
 
+            // 턴 넘기기 버튼 -> 턴 상태 간판으로 수정
             btnPassTurn.Location = new Point(800, 380);
             btnPassTurn.Size = new Size(200, 40);
-            btnPassTurn.Cursor = Cursors.Hand; // 턴넘기기버튼에 손가락버튼
+            btnPassTurn.Cursor = Cursors.Default; // 마우스 올려도 손가락 모양 안 뜨게
+            btnPassTurn.FlatStyle = FlatStyle.Flat; // 테두리 제거
+            btnPassTurn.FlatAppearance.BorderSize = 0; // 깔끔한 간판 디자인
 
             pnlPlayerHand.Location = new Point(800, 430);
             pnlPlayerHand.Size = new Size(580, 300);
@@ -522,16 +546,6 @@ namespace CardChess
 
             // 버그를 유발하던 쓰레기 패널 숨기기
             if (pnlOpponentDeck != null) pnlOpponentDeck.Visible = false;
-
-            Control[] targetButtons = this.Controls.Find("btnSurrender", true);
-            if (targetButtons.Length > 0)
-            {
-                Control btnSur = targetButtons[0];
-                // 턴 넘기기 버튼 오른쪽 끝(Right)에서 10픽셀 띄운 위치로 고정!
-                btnSur.Location = new Point(btnPassTurn.Right + 10, btnPassTurn.Top);
-                btnSur.Size = new Size(100, 40); // 항복 버튼 사이즈
-                btnSur.BringToFront();
-            }
 
             pnlPlayerDeck.BringToFront();
         }
@@ -1070,6 +1084,7 @@ namespace CardChess
             this.lblNetworkStatus = new System.Windows.Forms.Label();
             this.btnPassTurn = new System.Windows.Forms.Button();
             this.pnlPlayerHand.SuspendLayout();
+            this.pnlPlayerDeck.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlPlayerHand
@@ -1084,10 +1099,22 @@ namespace CardChess
             // pnlPlayerDeck
             // 
             this.pnlPlayerDeck.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPlayerDeck.Controls.Add(this.lblCardDescription);
             this.pnlPlayerDeck.Location = new System.Drawing.Point(381, 3);
             this.pnlPlayerDeck.Name = "pnlPlayerDeck";
             this.pnlPlayerDeck.Size = new System.Drawing.Size(204, 272);
             this.pnlPlayerDeck.TabIndex = 7;
+            // 
+            // lblCardDescription
+            // 
+            this.lblCardDescription.BackColor = System.Drawing.Color.Transparent;
+            this.lblCardDescription.Font = new System.Drawing.Font("맑은 고딕", 10F, System.Drawing.FontStyle.Bold);
+            this.lblCardDescription.ForeColor = System.Drawing.Color.Black;
+            this.lblCardDescription.Location = new System.Drawing.Point(10, 10);
+            this.lblCardDescription.Name = "lblCardDescription";
+            this.lblCardDescription.Size = new System.Drawing.Size(184, 252);
+            this.lblCardDescription.TabIndex = 0;
+            this.lblCardDescription.Text = "카드 설명";
             // 
             // pnlBoard
             // 
@@ -1107,7 +1134,7 @@ namespace CardChess
             // logbox
             // 
             this.logbox.FormattingEnabled = true;
-            this.logbox.ItemHeight = 15;
+            this.logbox.ItemHeight = 18;
             this.logbox.Location = new System.Drawing.Point(829, 207);
             this.logbox.Name = "logbox";
             this.logbox.Size = new System.Drawing.Size(460, 184);
@@ -1147,23 +1174,8 @@ namespace CardChess
             this.btnPassTurn.Name = "btnPassTurn";
             this.btnPassTurn.Size = new System.Drawing.Size(246, 40);
             this.btnPassTurn.TabIndex = 16;
-            this.btnPassTurn.Text = "턴 넘기기";
+            this.btnPassTurn.Text = "턴 보여줌";
             this.btnPassTurn.UseVisualStyleBackColor = true;
-            this.btnPassTurn.Click += new System.EventHandler(this.BtnPassTurn_Click);
-            // 
-            // lblCardDescription
-            // 
-            this.lblCardDescription.AutoSize = false;
-            this.lblCardDescription.Location = new System.Drawing.Point(10, 10);
-            this.lblCardDescription.Name = "lblCardDescription";
-            this.lblCardDescription.Size = new System.Drawing.Size(184, 252);
-            this.lblCardDescription.Font = new System.Drawing.Font("맑은 고딕", 10F, System.Drawing.FontStyle.Bold);
-            this.lblCardDescription.ForeColor = System.Drawing.Color.White;
-            this.lblCardDescription.BackColor = System.Drawing.Color.Transparent;
-            this.lblCardDescription.Text = "카드 설명";
-            this.lblCardDescription.TextAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.pnlPlayerDeck.Controls.Add(this.lblCardDescription);
-            this.lblCardDescription.ForeColor = System.Drawing.Color.Black;
             // 
             // MainForm
             // 
@@ -1177,6 +1189,7 @@ namespace CardChess
             this.Name = "MainForm";
             this.Text = "Card Chess Game";
             this.pnlPlayerHand.ResumeLayout(false);
+            this.pnlPlayerDeck.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
