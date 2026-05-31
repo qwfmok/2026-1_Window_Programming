@@ -48,7 +48,7 @@ namespace CardChess.Core
             {
                 if (i == 3) State.SetPieceAt(new Position(7, i), new Queen(PlayerType.Player1, new Position(7, i)));
                 else if (i == 4) State.SetPieceAt(new Position(7, i), new King(PlayerType.Player1, new Position(7, i)));
-                else State.SetPieceAt(new Position(7, i), new Pawn(PlayerType.Player1, new Position(7, i)))
+                else State.SetPieceAt(new Position(7, i), new Pawn(PlayerType.Player1, new Position(7, i)));
             }
         }
 
@@ -166,6 +166,12 @@ namespace CardChess.Core
                 return false;
             }
 
+            if (State.HasUsedCardThisTurn)
+            {
+                errorMessage = "한 턴에 스킬 카드는 딱 1장만 사용할 수 있습니다!";
+                return false;
+            }
+
             if (card == null)
             {
                 errorMessage = "선택된 카드가 없습니다.";
@@ -177,6 +183,7 @@ namespace CardChess.Core
                 PlayerType currentPlayer = State.CurrentTurn;
 
                 CardMgr.UseCard(card, targetPos, State.CurrentTurn);
+                State.HasUsedCardThisTurn = true;
 
                 string checkMessage;
                 CheckCheckmateAfterAction(currentPlayer, out checkMessage);
@@ -205,6 +212,7 @@ namespace CardChess.Core
         {
             UpdatePieceStatusEffects();
             UpdateWallTurns();
+            State.HasUsedCardThisTurn = false;
         }
 
         private void UpdatePieceStatusEffects()
