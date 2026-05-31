@@ -52,10 +52,10 @@ namespace CardChess.Menu
                 {
                     try
                     {
-                        // 만약 상대방에게 나 나간다 라고 항복 패킷을 쏴줘야 한다면 아래 주석을 해제하세요.
+                        // 만약 상대방에게 나 나간다 라고 항복 패킷을 쏴줘야 한다면 아래 주석 해제
                         // if (udpProtocol.IsConnected) udpProtocol.Send("SURRENDER_EXIT");
 
-                        // UDPprotocol 내부에 소켓을 닫는 Close()나 Disconnect() 메서드가 있다면 호출해 줍니다.
+                        // UDPprotocol 내부에 소켓을 닫는 Close()나 Disconnect() 메서드가 있다면 호출
                         // (클래스 내부에 명칭이 다를 수 있으니 확인 후 소켓 Close 함수를 여기에 적어주세요)
                         // udpProtocol.Close(); 
                     }

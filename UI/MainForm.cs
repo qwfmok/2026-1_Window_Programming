@@ -150,13 +150,26 @@ namespace CardChess
                 if (udpProtocol != null && udpProtocol.IsConnected)
                     udpProtocol.Send(msg);
                 
-                if (msg.StartsWith("CARD")) // 글로벌 이펙트이므로 로그가 출력될 때 나오는 것이 낫다고 생각
+                if (msg.StartsWith("CARD")) // 카드 발동 시 진입하는 블록
                 {
                     string[] p = msg.Split(',');
-                    if (p.Length > 1 && p[1] == "시간 왜곡")
+                    string cardName = p.Length > 1 ? p[1] : "";
+
+                    if (cardName == "방벽 건설")
                     {
-                        boardView.TriggerClockEffect(); // 보드뷰에서 호출해오는걸로 구현했음
-                    }
+                        SoundsManager.Play("Card_wall");
+                    } // 벽 놓을 때 쿵 떨어지는 사운드 재생시키는 구간
+
+                    else if (cardName == "시간 왜곡")
+                    {
+                        SoundsManager.Play("Card_timewalk");
+                        boardView.TriggerClockEffect();
+                    } // 윗줄이 사운드, 밑줄이 글로벌 이펙트
+
+                    else
+                    {
+                        SoundsManager.Play("Card_effect");
+                    } // 그 외 일반 카드는 일반 효과음 재생
                 }
             };
             this.inputController.OnLogMessage += (sender, msg) => { AddLog(msg); };
@@ -372,6 +385,7 @@ namespace CardChess
 
             if (boardView.TryConvertPixelToPosition(e.X, e.Y, out Position position))
             {
+                Position? preSelectedPos = inputController.SelectedPosition;
                 IPiece clickedPiece = gameManager.State.GetPieceAt(position);
 
                 if (clickedPiece != null && boardView.PieceAnimations.ContainsKey(clickedPiece))
@@ -385,7 +399,12 @@ namespace CardChess
 
                 inputController.OnBoardClicked(position);
                 boardView.HandleMovementAnimation();
-                SoundsManager.Play("Piece_attack"); // 공격 사운드
+
+                if (preSelectedPos.HasValue && gameManager.State.GetPieceAt(preSelectedPos.Value) == null)
+                {
+                    SoundsManager.Play("Piece_attack"); // 기물 공격 사운드
+                }
+
                 UpdateBoardHighlights(position);
 
                 // 체크 표시 포함해서 보드 강제 갱신
@@ -774,8 +793,6 @@ namespace CardChess
                                 }
                                 else
                                 {
-                                    // 마법 카드 발동 성공 시 사운드 재생
-                                    SoundsManager.Play("Piece_attack");
                                     RefreshHand();
                                 }
                             }

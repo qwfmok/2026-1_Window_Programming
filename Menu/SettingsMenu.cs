@@ -23,7 +23,7 @@ namespace CardChess.Menu
 
             // 설정창 기본 세팅
             this.Text = "환경 설정";
-            this.Size = new Size(400, 350);
+            this.Size = new Size(400, 440);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -89,7 +89,7 @@ namespace CardChess.Menu
                 }
                 else
                 {
-                    SoundsManager.StopBGM("bg_music");
+                    SoundsManager.StopBGM();
                     btnSound.Text = "🔇 BGM 켜기";
                 }
             };
@@ -111,7 +111,19 @@ namespace CardChess.Menu
                 };
             }
 
-            // 4. 닫기 버튼
+            // 4. 마스터 볼륨 조절
+            int volumeY = startY + gap * 4; // 30 + 280 = 310px 위치에 정렬
+
+            Label lblMasterVol = CreateLabel($"🔊 게임 음량: {(int)(SoundsManager.MasterVolume * 100)}%", volumeY);
+
+            TrackBar trackMaster = CreateTrackBar((int)(SoundsManager.MasterVolume * 100), volumeY + 25);
+            trackMaster.Scroll += (s, e) =>
+            {
+                SoundsManager.MasterVolume = trackMaster.Value / 100f;
+                lblMasterVol.Text = $"🔊 게임 음량: {trackMaster.Value}%";
+            };
+
+            // 5. 닫기 버튼
             Button btnClose = CreateButton("❌ 닫기", startY + gap * 3);
             btnClose.Click += (s, e) => this.Close();
         }
@@ -132,5 +144,36 @@ namespace CardChess.Menu
             this.Controls.Add(btn);
             return btn;
         }
+
+        // 마스터 볼륨 조절용 라벨
+        private Label CreateLabel(string text, int yPos)
+        {
+            Label lbl = new Label();
+            lbl.Text = text;
+            lbl.Size = new Size(260, 20);
+            lbl.Location = new Point((this.ClientSize.Width - 260) / 2 + 5, yPos);
+            lbl.Font = new Font("맑은 고딕", 10f, FontStyle.Bold);
+            lbl.ForeColor = Color.White;
+            lbl.BackColor = Color.Transparent;
+            this.Controls.Add(lbl);
+            return lbl;
+        }
+
+        // 마스터 볼륨 조절용 트랙바
+        private TrackBar CreateTrackBar(int currentVal, int yPos)
+        {
+            TrackBar track = new TrackBar();
+            track.Minimum = 0;
+            track.Maximum = 100;
+            track.Value = currentVal;
+            track.Size = new Size(260, 30);
+            track.Location = new Point((this.ClientSize.Width - 260) / 2, yPos);
+            track.TickStyle = TickStyle.None;
+            track.BackColor = Color.Gray;
+            track.Cursor = Cursors.Hand;
+            this.Controls.Add(track);
+            return track;
+        }
+
     }
 }

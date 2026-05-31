@@ -59,6 +59,7 @@ namespace CardChess
             // 버튼 클릭 시 로비용 설정창 활성화 (인게임이 아니므로 false, 네트워크는 null 전달)
             btnSettings.Click += (s, e) =>
             {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
                 using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, false, null))
                 {
                     settings.ShowDialog();
@@ -190,6 +191,11 @@ namespace CardChess
             base.OnMouseClick(e);
             Point mousePos = e.Location;
             var rects = CalculateButtonRects();
+
+            if (System.Linq.Enumerable.Any(rects.Values, rect => rect.Contains(mousePos))) // 이게 있으면 OnMouseClick 메소드 내에서 행해지는 이벤트 핸들러들이 일괄적으로 UI 사운드를 내게 됨
+            {
+                CardChess.Menu.SoundsManager.Play("Menu_icon_select");
+            }
 
             // 방 생성 클릭
             if (rects.ContainsKey("Create") && rects["Create"].Contains(mousePos))
@@ -390,210 +396,3 @@ namespace CardChess
         }
     }
 }
-
-//using CardChess.Core;
-//using CardChess.Models;
-//using System;
-//using System.Collections.Generic;
-//using System.ComponentModel;
-//using System.Data;
-//using System.Drawing;
-//using System.IO;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-//using System.Windows.Forms;
-
-//namespace CardChess
-//{
-//    public partial class Form1 : Form
-//    {
-//        private Image backgroundBg;
-//        private Image Barimg;
-
-//        private Image Numbercreate;
-//        private Image Numberedit;
-//        private Image Gamestartbtn;
-//        private Image Exitgame;
-//        private Image Makercredits;
-
-//        private UDPprotocol udpProtocol;
-//        private PlayerType myPlayerType;
-//        private TextBox txtNetworkCode;
-//        private Label lblNetworkStatus;
-
-//        private Button btnHost;
-//        private Button btnJoin;
-//        private Button btnStart;
-//        private Button btnCredits;
-//        private Button btnExit;
-
-//        public Form1()
-//        {
-//            InitializeComponent();
-
-//            this.Width = 1600;
-//            this.Height = 900; // 폼 최초 크기 정의
-//            this.DoubleBuffered = true; // 이미지 깜빡임 방지
-
-//            LoadBackgroundImage();
-//            SetupTextBox();
-//        }
-
-//        private void LoadBackgroundImage()
-//        {
-//            {
-//                try
-//                {
-//                    string assetsPath = Path.Combine(Application.StartupPath, "Assets");
-
-//                    // 배경과 바 이미지 로드
-//                    backgroundBg = Image.FromFile(Path.Combine(assetsPath, "bg.png"));
-//                    Barimg = Image.FromFile(Path.Combine(assetsPath, "bar.png"));
-//                    Numbercreate = Image.FromFile(Path.Combine(assetsPath, "button_roomcreate.png"));
-//                    Numberedit = Image.FromFile(Path.Combine(assetsPath, "button_join.png"));
-//                    Gamestartbtn = Image.FromFile(Path.Combine(assetsPath, "button_gamestart.png"));
-//                    Makercredits = Image.FromFile(Path.Combine(assetsPath, "button_exit.png"));
-//                    Exitgame = Image.FromFile(Path.Combine(assetsPath, "button_credit.png"));
-//                }
-//                catch (Exception ex)
-//                {
-//                    MessageBox.Show("이미지 로드 실패: " + ex.Message);
-//                }
-//            }
-//        }
-//        private void SetupTextBox()
-//        {
-//            textBox1.BorderStyle = BorderStyle.None;
-//        }
-
-//        private void InitLobbyUI()
-//        {
-//            lblNetworkStatus = new Label();
-//            lblNetworkStatus.Location = new Point(90, 640);
-//            lblNetworkStatus.Size = new Size(300, 30);
-//            lblNetworkStatus.Font = new Font("맑은 고딕", 11f, FontStyle.Bold);
-//            lblNetworkStatus.ForeColor = Color.White;
-//            lblNetworkStatus.BackColor = Color.Transparent;
-//            lblNetworkStatus.Text = "네트워크: 오프라인";
-
-//            btnHost = CreateImageButton(Numbercreate, new Point(90, 680), new Size(140, 40), BtnHost_Click);
-//            btnJoin = CreateImageButton(Numberedit, new Point(240, 680), new Size(140, 40), BtnJoin_Click);
-//            btnStart = CreateImageButton(Gamestartbtn, new Point(90, 740), new Size(290, 50), BtnStart_Click);
-//            btnCredits = CreateImageButton(Makercredits, new Point(90, 800), new Size(140, 40), BtnCredits_Click);
-//            btnExit = CreateImageButton(Exitgame, new Point(240, 800), new Size(140, 40), BtnExit_Click);
-
-//            btnStart.Enabled = false;
-
-//            this.Controls.Add(txtNetworkCode);
-//            this.Controls.Add(lblNetworkStatus);
-//            this.Controls.Add(btnHost);
-//            this.Controls.Add(btnJoin);
-//            this.Controls.Add(btnStart);
-//            this.Controls.Add(btnCredits);
-//            this.Controls.Add(btnExit);
-//        }
-//        private Button CreateImageButton(Image buttonImage, Point location, Size size, EventHandler clickEvent)
-//        {
-//            Button btn = new Button();
-//            btn.Location = location;
-//            btn.Size = size;
-
-//            // 텍스트는 지우고 이미지를 정중앙에 배치합니다.
-//            btn.Text = "";
-//            btn.Image = buttonImage;
-//            btn.ImageAlign = ContentAlignment.MiddleCenter;
-
-//            // 버튼 특유의 Windows 스타일 뼈대 완전히 걷어내기
-//            btn.FlatStyle = FlatStyle.Flat;
-//            btn.FlatAppearance.BorderSize = 0;
-//            btn.FlatAppearance.MouseDownBackColor = Color.Transparent;
-//            btn.FlatAppearance.MouseOverBackColor = Color.Transparent;
-//            btn.BackColor = Color.Transparent;
-
-//            btn.Click += clickEvent;
-//            return btn;
-//        }
-//        private void BtnHost_Click(object sender, EventArgs e)
-//        {
-//            udpProtocol = new UDPprotocol();
-//            udpProtocol.OnMessage += UdpProtocol_OnMessage;
-
-//            string code = udpProtocol.Starthostip();
-//            txtNetworkCode.Text = code;
-//            lblNetworkStatus.Text = "호스트 대기중... (코드 전달)";
-
-//            myPlayerType = PlayerType.Player1;
-//            btnHost.Enabled = false;
-//            btnJoin.Enabled = false;
-//        }
-
-//        private void BtnJoin_Click(object sender, EventArgs e)
-//        {
-//            string code = txtNetworkCode.Text.Trim();
-//            if (string.IsNullOrEmpty(code))
-//            {
-//                MessageBox.Show("접속 코드를 입력해주세요!");
-//                return;
-//            }
-
-//            udpProtocol = new UDPprotocol();
-//            udpProtocol.OnMessage += UdpProtocol_OnMessage;
-
-//            udpProtocol.Joinguestip(code);
-//            lblNetworkStatus.Text = "서버 접속 시도중...";
-
-//            myPlayerType = PlayerType.Player2;
-//            btnHost.Enabled = false;
-//            btnJoin.Enabled = false;
-//        }
-
-//        private void UdpProtocol_OnMessage(string msg)
-//        {
-//            if (this.InvokeRequired)
-//            {
-//                this.Invoke(new Action(() => UdpProtocol_OnMessage(msg)));
-//                return;
-//            }
-
-//            if (msg == "CONNECTED")
-//            {
-//                lblNetworkStatus.Text = "네트워크: 연결됨! 🟢";
-//                lblNetworkStatus.ForeColor = Color.LightGreen;
-//                btnStart.Enabled = true; // 대기 타던 시작 이미지 버튼 활성화
-//            }
-//        }
-
-//        private void BtnStart_Click(object sender, EventArgs e)
-//        {
-//            udpProtocol.OnMessage -= UdpProtocol_OnMessage;
-//            MainForm gameForm = new MainForm(udpProtocol, myPlayerType);
-
-//            this.Hide();
-//            gameForm.ShowDialog();
-//            this.Close();
-//        }
-
-//        private void BtnCredits_Click(object sender, EventArgs e)
-//        {
-//            MessageBox.Show("Game Created by 개발자님!\n2026 All Rights Reserved.", "크레딧");
-//        }
-
-//        private void BtnExit_Click(object sender, EventArgs e)
-//        {
-//            Application.Exit();
-//        }
-//        protected override void OnPaint(PaintEventArgs e)
-//        {
-//            base.OnPaint(e);
-//            if (backgroundBg != null)
-//            {
-//                e.Graphics.DrawImage(backgroundBg, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
-//            }
-//            if (Barimg != null)
-//            {
-//                e.Graphics.DrawImage(Barimg, 77, 588, 166, 37);
-//            }
-//        }
-//    }
-//}
