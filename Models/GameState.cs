@@ -23,6 +23,7 @@ namespace CardChess.Core
         public bool IsGameOver { get; set; }
         public PlayerType? Winner { get; set; }
         public bool IsExtraTurnGranted { get; set; }
+        public bool HasUsedCardThisTurn { get; set; }
         public Random SharedRandom { get; set; }
 
         public GameState()
@@ -43,6 +44,7 @@ namespace CardChess.Core
             IsGameOver = false;
             Winner = null;
             IsExtraTurnGranted = false;
+            HasUsedCardThisTurn = false;
         }
 
         public bool IsWithinBoard(Position position)
