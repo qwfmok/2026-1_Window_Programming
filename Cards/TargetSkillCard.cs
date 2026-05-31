@@ -110,6 +110,7 @@ namespace CardChess.Cards
             {
                 case "방어막":
                     targetPiece.HasShield = true;
+                    targetPiece.FrozenTurns = 2;
                     MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물에 공격 1회 방어 보호막이 씌워졌습니다.");
                     break;
 

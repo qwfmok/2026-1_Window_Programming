@@ -14,6 +14,7 @@ namespace CardChess.Pieces
         PieceType Type { get; }
         bool HasShield { get; set; }        // 신성한 보호막 여부
         bool IsFrozen { get; set; }         // 존야(무적/정지) 여부
+        int FrozenTurns { get; set; }
         Position? ShadowPosition { get; set; } // 영혼 해방(요네 E) 돌아갈 위치
         int ShadowTurns { get; set; }       // 영혼 해방 남은 턴 수
 
