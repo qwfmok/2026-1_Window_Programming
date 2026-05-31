@@ -1,64 +1,131 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Media;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using NAudio.Wave; // NAudio 네임스페이스 추가
 
 namespace CardChess.Menu
 {
-    public static class SoundsManager // 얘가 사운드의 기본값이 되므로 상수 클래스로 구현
+    public static class SoundsManager
     {
-        private static Dictionary<string, SoundPlayer> soundCache = new Dictionary<string, SoundPlayer>(); // 잠깐 메모리에 올려두는 용도
-        
+        // MP3 파일 경로 캐싱
+        private static Dictionary<string, string> soundPaths = new Dictionary<string, string>();
+
+        // BGM 전용 플레이어 및 리더 변수
+        private static WaveOutEvent bgmOutput;
+        private static AudioFileReader bgmReader;
+        private static bool isBgmLooping = false;
+
+        private static float masterVolume = 0.5f;
+
+        public static float MasterVolume
+        {
+            get => masterVolume;
+            set
+            {
+                masterVolume = Math.Max(0.0f, Math.Min(1.0f, value));
+                // BGM이 재생 중이라면 즉시 볼륨 변경 반영
+                if (bgmReader != null)
+                {
+                    bgmReader.Volume = masterVolume;
+                }
+            }
+        }
+
         public static void LoadALLSounds()
         {
-            string[] soundFiles = { "bg_music", "Piece_select", "Piece_attack" }; // 사운드 배열. 사운드 추가될 때마다 "[filename].wav", 로 추가하면 됨
+            // 확장자를 .mp3로 변경
+            string[] soundFiles = { "bg_music", "Piece_select", "Piece_attack", "Menu_icon_select", "Card_wall", "Card_timewalk", "Card_effect" };
 
             foreach (var soundName in soundFiles)
             {
-                string path = Path.Combine(Application.StartupPath, "Sounds", $"{soundName}.wav"); // 기존 Assets 폴더가 아닌 Sounds 폴더로 컴바인을 다르게 찍어줘야 함
+                string path = Path.Combine(Application.StartupPath, "Sounds", $"{soundName}.mp3");
 
                 if (File.Exists(path))
                 {
-                    try
-                    {
-                        SoundPlayer player = new SoundPlayer(path);
-                        player.Load(); // 메모리에 미리 로드
-                        soundCache[soundName] = player;
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"사운드 로드 실패 ({soundName}): {ex.Message}");
-                    }
+                    soundPaths[soundName] = path; // 경로만 보관 (재생할 때 읽음)
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"사운드 파일 없음: {path}");
                 }
             }
         }
 
         public static void PlayBGM(string soundName)
         {
-            if (soundCache.TryGetValue(soundName, out SoundPlayer player))
+            if (!soundPaths.TryGetValue(soundName, out string path)) return;
+
+            try
             {
-                player.PlayLooping();
+                // 이미 재생 중인 BGM이 있다면 정지 및 메모리 해제
+                StopBGM();
+
+                bgmOutput = new WaveOutEvent();
+                bgmReader = new AudioFileReader(path);
+
+                bgmOutput.Init(bgmReader);
+                bgmOutput.Play();
+                isBgmLooping = true;
+
+                // 🌟 BGM 무한 루프 구현: 재생이 끝나면 다시 처음(0초)으로 돌려서 플레이
+                bgmOutput.PlaybackStopped += (sender, args) =>
+                {
+                    if (isBgmLooping && bgmReader != null && bgmOutput != null)
+                    {
+                        bgmReader.Position = 0; // 오디오 스트림을 처음으로 되감기
+                        bgmOutput.Play();
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BGM 재생 실패: {ex.Message}");
             }
         }
 
-        // 현재는 아무 기능도 없지만 추후에 on off 기능을 구현한다면 이거 호출해다 쓰면 됨
-        public static void StopBGM(string soundName)
+        public static void StopBGM()
         {
-            if (soundCache.TryGetValue(soundName, out SoundPlayer player))
+            isBgmLooping = false;
+
+            if (bgmOutput != null)
             {
-                player.Stop();
+                bgmOutput.Stop();
+                bgmOutput.Dispose();
+                bgmOutput = null;
+            }
+
+            if (bgmReader != null)
+            {
+                bgmReader.Dispose();
+                bgmReader = null;
             }
         }
 
+        // 🌟 효과음 동시 재생(Fire and Forget) 함수
         public static void Play(string soundName)
         {
-            if (soundCache.TryGetValue(soundName, out SoundPlayer player))
+            if (!soundPaths.TryGetValue(soundName, out string path)) return;
+
+            try
             {
-                player.Play();
+                // 효과음은 불릴 때마다 독립된 장치(채널)를 생성하므로 서로의 소리를 끊지 않습니다.
+                var sfxOutput = new WaveOutEvent();
+                var sfxReader = new AudioFileReader(path);
+
+                sfxOutput.Init(sfxReader);
+                sfxOutput.Play();
+
+                // 효과음 재생이 끝나면 자동으로 리소스를 닫고 메모리에서 해제(Dispose)
+                sfxOutput.PlaybackStopped += (sender, args) =>
+                {
+                    sfxOutput.Dispose();
+                    sfxReader.Dispose();
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"효과음 재생 실패 ({soundName}): {ex.Message}");
             }
         }
     }
