@@ -18,6 +18,11 @@ namespace CardChess.Core
         public bool IsLocalAction { get; set; } = true;
         public event Action<string> OnNetworkBroadcast;
 
+        public void QueueRandomResults(IEnumerable<int> values)
+        {
+            CardMgr.QueueRandomReplay(values);
+        }
+
         public GameManager(int seed)
         {
             State = new GameState();
@@ -88,13 +93,50 @@ namespace CardChess.Core
                         errorMessage = "대상은 봉인 상태이므로 공격할 수 없습니다!";
                         return false;
                     }
+                }
+
+                if (IsLocalAction)
+                {
+                    CardMgr.BeginRandomCapture();
+                }
+
+                if (targetPiece != null && targetPiece.Owner != piece.Owner)
+                {
+
+                    TrapCard defendingTrap = State.Traps[targetPiece.Owner]
+                        .OfType<TrapCard>()
+                        .FirstOrDefault();
+
+                    if (defendingTrap != null)
+                    {
+                        State.Traps[targetPiece.Owner].Remove(defendingTrap);
+                        bool reflected = defendingTrap.OnTrigger(from, to, State);
+                        if (reflected)
+                        {
+                            RecordCapturedPiece(piece);
+                            if (piece.Type == PieceType.King)
+                            {
+                                State.IsGameOver = true;
+                                State.Winner = targetPiece.Owner;
+                            }
+
+                            errorMessage = $"[{defendingTrap.Name}] 함정이 발동하여 공격 기물이 파괴되었습니다.";
+                            BroadcastMove(from, to);
+
+                            if (!State.IsGameOver)
+                            {
+                                OnTurnEndRequired?.Invoke();
+                            }
+                            return true;
+                        }
+                    }
 
                     if (targetPiece.HasShield)
                     {
                         targetPiece.HasShield = false;
                         errorMessage = "대상의 신성한 보호막이 공격을 1회 방어했습니다!";
 
-                        if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+                        BroadcastMove(from, to);
 
                         OnTurnEndRequired?.Invoke();
                         return true;
@@ -109,7 +151,7 @@ namespace CardChess.Core
                         State.Winner = piece.Owner;
                         errorMessage = $"{piece.Owner}가 상대 킹을 잡았습니다. 게임 종료!";
 
-                        if (IsLocalAction) OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+                        BroadcastMove(from, to);
                         return true;
                     }
 
@@ -130,8 +172,7 @@ namespace CardChess.Core
                     errorMessage = checkMessage;
                 }
 
-                if (IsLocalAction)
-                    OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}");
+                BroadcastMove(from, to);
 
                 // 체크메이트가 아닐 때는 턴 종료
                 if (!State.IsGameOver)
@@ -182,6 +223,11 @@ namespace CardChess.Core
             {
                 PlayerType currentPlayer = State.CurrentTurn;
 
+                if (IsLocalAction)
+                {
+                    CardMgr.BeginRandomCapture();
+                }
+
                 CardMgr.UseCard(card, targetPos, State.CurrentTurn);
                 State.HasUsedCardThisTurn = true;
 
@@ -195,7 +241,11 @@ namespace CardChess.Core
 
                 if (IsLocalAction)
                 {
-                    OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}");
+                    List<int> randomResults = CardMgr.EndRandomCapture();
+                    string randomData = randomResults.Count == 0
+                        ? ""
+                        : $",R:{string.Join(";", randomResults)}";
+                    OnNetworkBroadcast?.Invoke($"CARD,{card.Name},{targetPos.Row},{targetPos.Col}{randomData}");
                 }
 
                 return true;
@@ -318,38 +368,7 @@ namespace CardChess.Core
             if (piece == null)
                 return false;
 
-            int dr = targetPos.Row - from.Row;
-            int dc = targetPos.Col - from.Col;
-
-            switch (piece.Type)
-            {
-                case PieceType.Pawn:
-                    int pawnDir = piece.Owner == PlayerType.Player1 ? -1 : 1;
-
-                    return dr == pawnDir && Math.Abs(dc) == 1;
-
-                case PieceType.Knight:
-                    return (Math.Abs(dr) == 2 && Math.Abs(dc) == 1) ||
-                           (Math.Abs(dr) == 1 && Math.Abs(dc) == 2);
-
-                case PieceType.Bishop:
-                    return Math.Abs(dr) == Math.Abs(dc) &&
-                           IsPathClear(from, targetPos);
-
-                case PieceType.Rook:
-                    return (dr == 0 || dc == 0) &&
-                           IsPathClear(from, targetPos);
-
-                case PieceType.Queen:
-                    return (dr == 0 || dc == 0 || Math.Abs(dr) == Math.Abs(dc)) &&
-                           IsPathClear(from, targetPos);
-
-                case PieceType.King:
-                    return Math.Abs(dr) <= 1 && Math.Abs(dc) <= 1;
-
-                default:
-                    return false;
-            }
+            return piece.CanAttack(targetPos, State);
         }
 
         public List<Position> GetCheckingPiecePositions()
@@ -458,6 +477,12 @@ namespace CardChess.Core
                         if (targetPiece != null && targetPiece.Owner == player)
                             continue;
 
+                        if (targetPiece != null && targetPiece.IsFrozen)
+                            continue;
+
+                        if (targetPiece != null && targetPiece.HasShield)
+                            continue;
+
                         Position originalPosition = piece.CurrentPosition;
 
                         State.SetPieceAt(from, null);
@@ -479,6 +504,29 @@ namespace CardChess.Core
             }
 
             return false;
+        }
+
+        private void BroadcastMove(Position from, Position to)
+        {
+            if (!IsLocalAction)
+                return;
+
+            List<int> randomResults = CardMgr.EndRandomCapture();
+            string randomData = randomResults.Count == 0
+                ? ""
+                : $",R:{string.Join(";", randomResults)}";
+            OnNetworkBroadcast?.Invoke($"MOVE,{from.Row},{from.Col},{to.Row},{to.Col}{randomData}");
+        }
+
+        private void RecordCapturedPiece(IPiece piece)
+        {
+            if (piece == null || piece.Type == PieceType.King)
+                return;
+
+            if (piece.Owner == PlayerType.Player1)
+                State.Player1DeadPieces.Add(piece.Type);
+            else
+                State.Player2DeadPieces.Add(piece.Type);
         }
 
         private bool CheckCheckmateAfterAction(PlayerType attacker, out string message)

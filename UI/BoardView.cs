@@ -98,11 +98,31 @@ namespace CardChess.View
             CellHeight = gridHeight / BoardManager.MAX_ROW;
         }
 
+        public RectangleF GetCellRectangle(Position position)
+        {
+            CalculateBoardDimensions();
+            int visualRow = GetVisualRow(position.Row);
+            int visualCol = GetVisualCol(position.Col);
+            return new RectangleF(
+                XOffset + visualCol * CellWidth,
+                YOffset + visualRow * CellHeight,
+                CellWidth,
+                CellHeight);
+        }
+
         //마우스 클릭 시 거꾸로 계산하기
         public bool TryConvertPixelToPosition(int mouseX, int mouseY, out Position position)
         {
             position = default;
             CalculateBoardDimensions();
+
+            float boardRight = XOffset + CellWidth * BoardManager.MAX_COL;
+            float boardBottom = YOffset + CellHeight * BoardManager.MAX_ROW;
+            if (mouseX < XOffset || mouseY < YOffset || mouseX >= boardRight || mouseY >= boardBottom)
+            {
+                return false;
+            }
+
             int visualCol = (int)((mouseX - XOffset) / CellWidth);
             int visualRow = (int)((mouseY - YOffset) / CellHeight);
 

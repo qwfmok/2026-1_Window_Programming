@@ -77,6 +77,7 @@ namespace CardChess
 
             LoadGameAssets();
             ApplyButtonImages(); // 버튼에 이미지를 씌우는 로직 호출
+            CardChess.View.ResponsiveLayout.Attach(this, new Size(1584, 861));
         }
         private void LoadGameAssets()
         {

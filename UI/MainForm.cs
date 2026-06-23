@@ -3,6 +3,7 @@ using CardChess.Core;
 using CardChess.Input;
 using CardChess.Menu;
 using CardChess.Models;
+using CardChess.Networking;
 using CardChess.Pieces;
 using CardChess.View;
 using System;
@@ -38,10 +39,13 @@ namespace CardChess
         // --- 드래그 앤 드롭 카드 분신 제어 ---
         private Button ghostCard = null;
         private Button originalCardButton = null;
+        private Point cardMouseDownScreenPoint;
+        private bool isCardDragPending;
         private bool gameEndMessageShown = false;
+        private bool surrenderSent = false;
 
-        // --- 메인 메뉴인 Form1으로부터 UDP 프로토콜 연결 후 해당 통신망을 받아올 때 사용하는 변수임 ---
-        private UDPprotocol udpProtocol;
+        // --- 메인 메뉴에서 생성한 SignalR 연결을 게임 화면에서도 그대로 사용 ---
+        private SignalRProtocol networkProtocol;
         private Label lblNetworkStatus;
 
         // --- 엔진 타이머 ---
@@ -77,12 +81,18 @@ namespace CardChess
         // --- 게임 플레이 화면 UI 이미지 변수부 ---
         private Image imgCardBack;
         private Image imgPlayareabg;
+        private Button btnSettings;
+        private readonly ToolTip chatToolTip = new ToolTip();
+
+        private const int MaxChatLength = 200;
+        private const int DesignClientWidth = 1584;
+        private const int DesignClientHeight = 861;
 
         // 어디서든 MainForm에 접근할 수 있게 해주는 static 변수 선언
         public static MainForm Instance;
 
         // 1. 생성자 진입점
-        public MainForm(UDPprotocol connectedUdp, PlayerType assignedPlayerType, int seed)
+        public MainForm(SignalRProtocol connectedNetwork, PlayerType assignedPlayerType, int seed)
         {
             InitializeComponent();
 
@@ -99,12 +109,15 @@ namespace CardChess
             enableDoubleBuffer(pnlPlayArea);
             // --- 화면 버퍼 제거부 ---
 
-            this.Width = 1600;
-            this.Height = 900; // MainForm(이하 메인폼)의 최초 크기 정의
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false; // 윈도우 기본 최대화 버튼 비활성화
-
-            this.pnlBoard.Size = new Size(720, 720); // 패널보드의 최초 크기 정의
+            this.AutoScaleMode = AutoScaleMode.None;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.MaximizeBox = true;
+            this.MinimumSize = new Size(700, 430);
+            this.ClientSize = ResponsiveLayout.GetFittedClientSize(
+                this,
+                new Size(DesignClientWidth, DesignClientHeight));
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Resize += MainForm_Resize;
 
             // 폼이 생성될 때 자기 자신을 Instance 변수에 등록
             Instance = this;
@@ -133,11 +146,11 @@ namespace CardChess
                 playerStateImg = Image.FromFile(imgPath);
             }
 
-            // 1-3. Form1에서 실행된 UDP프로토콜 네트워크를 MainForm까지 유지
-            this.udpProtocol = connectedUdp;
-            if (this.udpProtocol != null)
+            // 1-3. Form1에서 연결한 SignalR 통신을 MainForm까지 유지
+            this.networkProtocol = connectedNetwork;
+            if (this.networkProtocol != null)
             {
-                this.udpProtocol.OnMessage += UdpProtocol_OnMessage;
+                this.networkProtocol.OnMessage += NetworkProtocol_OnMessage;
             }
 
             this.gameManager = new GameManager(seed);
@@ -146,8 +159,8 @@ namespace CardChess
 
             this.gameManager.OnNetworkBroadcast += (msg) =>
             {
-                if (udpProtocol != null && udpProtocol.IsConnected)
-                    udpProtocol.Send(msg);
+                if (networkProtocol != null && networkProtocol.IsConnected)
+                    networkProtocol.Send(msg);
                 
                 if (msg.StartsWith("CARD")) // 카드 발동 시 진입하는 블록
                 {
@@ -188,6 +201,7 @@ namespace CardChess
             this.battleManager = new BattleManager(gameManager);
             this.battleManager.OnTurnChanged += BattleManager_OnTurnChanged;
             this.gameManager.OnTurnEndRequired += () => { battleManager.RequestTurnEnd(); };
+            this.btnPassTurn.Click += BtnPassTurn_Click;
 
 
             // 1-7. 뒷면 이미지를 프로그램 켤 때 딱 1번만 안전하게 로드
@@ -217,7 +231,7 @@ namespace CardChess
 
 
             // 설정 에셋 이미지 버튼 추가
-            Button btnSettings = new Button();
+            btnSettings = new Button();
             btnSettings.Size = new Size(60, 59);    // 에셋 이미지 크기에 맞게 조절
             btnSettings.Location = new Point(10, 10); // 좌측 상단
             btnSettings.Cursor = Cursors.Hand;
@@ -251,7 +265,7 @@ namespace CardChess
             btnSettings.Click += (s, e) =>
             {
                 CardChess.Menu.SoundsManager.Play("Menu_icon_select");
-                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, true, this.udpProtocol))
+                using (CardChess.Menu.SettingsMenu settings = new CardChess.Menu.SettingsMenu(this, true, this.networkProtocol))
                 {
                     settings.ShowDialog();
                 }
@@ -270,6 +284,7 @@ namespace CardChess
             txtChatInput.AutoSize = false;
             txtChatInput.KeyDown += TxtChatInput_KeyDown; // 엔터키 이벤트 연결
             this.Controls.Add(txtChatInput);
+            chatToolTip.SetToolTip(txtChatInput, "채팅 입력 중에는 숫자 카드 단축키가 꺼집니다. Esc를 누르면 보드 조작으로 돌아갑니다.");
 
 
             RelayoutUI();
@@ -355,25 +370,7 @@ namespace CardChess
 
         private void DrawCheckingPieceCell(Graphics g, Position pos)
         {
-            int boardStartX = 40;
-            int boardStartY = 35;
-            int cellSize = 80;
-
-            int drawRow = pos.Row;
-            int drawCol = pos.Col;
-
-            if (inputController != null && inputController.MyPlayerType == PlayerType.Player2)
-            {
-                drawRow = 7 - pos.Row;
-                drawCol = 7 - pos.Col;
-            }
-
-            Rectangle cellRect = new Rectangle(
-                boardStartX + drawCol * cellSize,
-                boardStartY + drawRow * cellSize,
-                cellSize,
-                cellSize
-            );
+            RectangleF cellRect = boardView.GetCellRectangle(pos);
 
             // 은은한 주황색 칸만 표시
             using (SolidBrush brush = new SolidBrush(Color.FromArgb(110, Color.Orange)))
@@ -395,6 +392,9 @@ namespace CardChess
         private void PnlBoard_MouseClick(object sender, MouseEventArgs e)
         {
             if (!battleManager.IsPlayable)
+                return;
+
+            if (!IsNetworkReady())
                 return;
 
             if (gameManager.State.IsGameOver)
@@ -470,15 +470,19 @@ namespace CardChess
         // ====================================================================
         private void RelayoutUI()
         {
-            this.ClientSize = new Size(1584, 861);
+            float scaleX = ClientSize.Width / (float)DesignClientWidth;
+            float scaleY = ClientSize.Height / (float)DesignClientHeight;
+            Func<int, int> sx = value => Math.Max(1, (int)Math.Round(value * scaleX));
+            Func<int, int> sy = value => Math.Max(1, (int)Math.Round(value * scaleY));
 
-            pnlBoard.Location = new Point(50, 50);
-            pnlBoard.Size = new Size(720, 720);
+            pnlBoard.Location = new Point(sx(50), sy(50));
+            int boardSize = Math.Min(sx(720), sy(720));
+            pnlBoard.Size = new Size(boardSize, boardSize);
 
-            lblNetworkStatus.Location = new Point(800, 50);
+            lblNetworkStatus.Location = new Point(sx(800), sy(50));
 
-            pnlOpponentHand.Location = new Point(800, 80);
-            pnlOpponentHand.Size = new Size(580, 120);
+            pnlOpponentHand.Location = new Point(sx(800), sy(80));
+            pnlOpponentHand.Size = new Size(sx(580), sy(120));
 
             if (imgPlayareabg != null)
             {
@@ -486,8 +490,8 @@ namespace CardChess
                 pnlOpponentHand.BackgroundImageLayout = ImageLayout.Stretch;
             }
 
-            logbox.Location = new Point(800, 210);
-            logbox.Size = new Size(450, 130);
+            logbox.Location = new Point(sx(800), sy(210));
+            logbox.Size = new Size(sx(450), sy(130));
             logbox.BackColor = Color.FromArgb(40, 40, 40);
             logbox.ForeColor = Color.White;
 
@@ -497,14 +501,14 @@ namespace CardChess
             // 로그박스 바로 밑에 채팅 입력창
             if (txtChatInput != null)
             {
-                txtChatInput.Location = new Point(800, 345);
-                txtChatInput.Size = new Size(450, 28);
+                txtChatInput.Location = new Point(sx(800), sy(345));
+                txtChatInput.Size = new Size(sx(450), sy(28));
                 txtChatInput.BringToFront();
             }
 
             // 로그박스 바로 오른쪽에 공용 덱이 예쁘게 들어감
-            pnlPlayArea.Location = new Point(1260, 210);
-            pnlPlayArea.Size = new Size(120, 160);
+            pnlPlayArea.Location = new Point(sx(1260), sy(210));
+            pnlPlayArea.Size = new Size(sx(120), sy(160));
 
             pnlPlayArea.BackgroundImage = null;
             pnlPlayArea.BackColor = Color.Transparent;
@@ -521,14 +525,14 @@ namespace CardChess
             pnlPlayArea.BorderStyle = BorderStyle.None;
 
             // 턴 넘기기 버튼 -> 턴 상태 간판으로 수정
-            btnPassTurn.Location = new Point(800, 380);
-            btnPassTurn.Size = new Size(200, 40);
-            btnPassTurn.Cursor = Cursors.Default; // 마우스 커서 변경 막는 속성
+            btnPassTurn.Location = new Point(sx(800), sy(380));
+            btnPassTurn.Size = new Size(sx(200), sy(40));
+            btnPassTurn.Cursor = Cursors.Hand;
             btnPassTurn.FlatStyle = FlatStyle.Flat; // 테두리 제거
             btnPassTurn.FlatAppearance.BorderSize = 0; // 깔끔한 간판 디자인
 
-            pnlPlayerHand.Location = new Point(800, 430);
-            pnlPlayerHand.Size = new Size(580, 300);
+            pnlPlayerHand.Location = new Point(sx(800), sy(430));
+            pnlPlayerHand.Size = new Size(sx(580), sy(300));
             if (imgPlayareabg != null)
             {
                 pnlPlayerHand.BackgroundImage = imgPlayareabg;
@@ -537,21 +541,40 @@ namespace CardChess
 
             // 카드 툴팁 텍스트 칸을 플레이어 핸드의 오른쪽 칸에 넣어서 가독성 향상
             pnlPlayerDeck.Parent = pnlPlayerHand;
-            pnlPlayerDeck.Location = new Point(360, 10);
-            pnlPlayerDeck.Size = new Size(210, 280);
+            pnlPlayerDeck.Location = new Point(sx(360), sy(10));
+            pnlPlayerDeck.Size = new Size(sx(210), sy(280));
             pnlPlayerDeck.BackColor = Color.FromArgb(200, 20, 20, 20);
             pnlPlayerDeck.BorderStyle = BorderStyle.FixedSingle;
 
             lblCardDescription.Parent = pnlPlayerDeck;
-            lblCardDescription.Location = new Point(5, 5);
-            lblCardDescription.Size = new Size(200, 270);
+            lblCardDescription.Location = new Point(sx(5), sy(5));
+            lblCardDescription.Size = new Size(
+                Math.Max(1, pnlPlayerDeck.Width - sx(10)),
+                Math.Max(1, pnlPlayerDeck.Height - sy(10)));
             lblCardDescription.BackColor = Color.Transparent;
             lblCardDescription.ForeColor = Color.White;
 
             // 기타 패널 숨기기
             if (pnlOpponentDeck != null) pnlOpponentDeck.Visible = false;
 
+            if (btnSettings != null)
+            {
+                btnSettings.Location = new Point(sx(10), sy(10));
+                btnSettings.Size = new Size(sx(60), sy(59));
+            }
+
             pnlPlayerDeck.BringToFront();
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            RelayoutUI();
+            boardView?.CalculateBoardDimensions();
+            if (gameManager != null && inputController != null)
+            {
+                RefreshHand();
+                pnlBoard.Invalidate();
+            }
         }
 
         private void RefreshHand()
@@ -579,7 +602,8 @@ namespace CardChess
                 c.Dispose();
             }
 
-            int cardWidth = 80, cardHeight = 120, spacingX = 10, spacingY = 10, startX = 10, startY = 10;
+            int cardWidth, cardHeight, spacingX, spacingY, startX, startY;
+            GetPlayerCardLayout(out cardWidth, out cardHeight, out spacingX, out spacingY, out startX, out startY);
             PlayerType myType = inputController.MyPlayerType;
             PlayerType oppType = (myType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
 
@@ -600,7 +624,12 @@ namespace CardChess
                         Top = startY + (cardHeight + spacingY) * row,
                         FlatStyle = FlatStyle.Flat,
                         BackColor = Color.FromArgb(40, 40, 40),
-                        Font = new Font("맑은 고딕", 10, FontStyle.Bold),
+                        Font = new Font(
+                            "맑은 고딕",
+                            Math.Max(7f, 10f * Math.Min(
+                                ClientSize.Width / (float)DesignClientWidth,
+                                ClientSize.Height / (float)DesignClientHeight)),
+                            FontStyle.Bold),
                         ForeColor = Color.White,
                         Text = card.Name,
                         Tag = card,
@@ -621,6 +650,8 @@ namespace CardChess
                     }
 
                     btnCard.MouseDown += CardButton_MouseDown;
+                    btnCard.MouseMove += CardButton_MouseMove;
+                    btnCard.MouseUp += CardButton_MouseUp;
                     btnCard.MouseEnter += CardButton_MouseEnter;
                     btnCard.Click += CardButton_Click;
                     pnlPlayerHand.Controls.Add(btnCard);
@@ -631,16 +662,18 @@ namespace CardChess
             if (gameManager.State.Hands.ContainsKey(oppType))
             {
                 int oppCount = gameManager.State.Hands[oppType].Count;
-                int oppSpacing = oppCount > 1 ? (pnlOpponentHand.Width - 20 - 70) / (oppCount - 1) : 85;
-                if (oppSpacing > 85) oppSpacing = 85;
-                if (oppSpacing < 45) oppSpacing = 45;
+                int oppCardHeight = Math.Max(60, pnlOpponentHand.Height - 20);
+                int oppCardWidth = Math.Max(42, (int)Math.Round(oppCardHeight * 0.7));
+                int oppSpacing = oppCount > 1 ? (pnlOpponentHand.Width - 20 - oppCardWidth) / (oppCount - 1) : oppCardWidth + 15;
+                if (oppSpacing > oppCardWidth + 15) oppSpacing = oppCardWidth + 15;
+                if (oppSpacing < Math.Max(25, oppCardWidth / 2)) oppSpacing = Math.Max(25, oppCardWidth / 2);
 
                 for (int i = 0; i < oppCount; i++)
                 {
                     Button btnOppCard = new Button
                     {
-                        Width = 70,
-                        Height = 100,
+                        Width = oppCardWidth,
+                        Height = oppCardHeight,
                         Left = 10 + oppSpacing * i,
                         Top = 10,
                         FlatStyle = FlatStyle.Flat,
@@ -686,40 +719,85 @@ namespace CardChess
 
         private void CardButton_MouseDown(object sender, MouseEventArgs e)
         {
+            if (e.Button != MouseButtons.Left)
+                return;
 
-            if (e.Button == MouseButtons.Left)
+            if (!IsNetworkReady())
+                return;
+
+            originalCardButton = sender as Button;
+            if (originalCardButton == null || !(originalCardButton.Tag is ICard))
+                return;
+
+            ICard clickedCard = (ICard)originalCardButton.Tag;
+            if (battleManager.IsPlayable && gameManager.CurrentTurn == inputController.MyPlayerType)
             {
-                originalCardButton = sender as Button;
-                ICard clickedCard = (ICard)originalCardButton.Tag;
-
-                if (battleManager.IsPlayable && gameManager.CurrentTurn == inputController.MyPlayerType)
-                {
-                    inputController.OnCardClicked(clickedCard);
-                }
-
-                // 고스트 카드에 원본 카드의 이미지 속성도 똑같이 복사
-                ghostCard = new Button
-                {
-                    Width = originalCardButton.Width,
-                    Height = originalCardButton.Height,
-                    Text = originalCardButton.Text,
-                    Font = originalCardButton.Font,
-                    BackColor = originalCardButton.BackColor,
-                    FlatStyle = FlatStyle.Flat,
-                    // 원본의 일러스트와 이미지 레이아웃을 그대로 가져옴
-                    BackgroundImage = originalCardButton.BackgroundImage,
-                    BackgroundImageLayout = originalCardButton.BackgroundImageLayout,
-                    ForeColor = Color.White
-                };
-
-                this.Controls.Add(ghostCard);
-                ghostCard.BringToFront();
-                originalCardButton.Visible = false;
-
-                ghostCard.MouseMove += GhostCard_MouseMove;
-                ghostCard.MouseUp += GhostCard_MouseUp;
-                ghostCard.Capture = true;
+                inputController.OnCardClicked(clickedCard);
+                HighlightSelectedCard();
             }
+
+            cardMouseDownScreenPoint = Cursor.Position;
+            isCardDragPending = true;
+            originalCardButton.Capture = true;
+        }
+
+        private void CardButton_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!isCardDragPending || e.Button != MouseButtons.Left || originalCardButton != sender)
+                return;
+
+            Size dragSize = SystemInformation.DragSize;
+            Rectangle dragThreshold = new Rectangle(
+                cardMouseDownScreenPoint.X - dragSize.Width / 2,
+                cardMouseDownScreenPoint.Y - dragSize.Height / 2,
+                dragSize.Width,
+                dragSize.Height);
+
+            if (!dragThreshold.Contains(Cursor.Position))
+            {
+                StartGhostCardDrag();
+            }
+        }
+
+        private void CardButton_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || originalCardButton != sender || ghostCard != null)
+                return;
+
+            originalCardButton.Capture = false;
+            isCardDragPending = false;
+            originalCardButton = null;
+        }
+
+        private void StartGhostCardDrag()
+        {
+            if (originalCardButton == null || originalCardButton.IsDisposed || ghostCard != null)
+                return;
+
+            isCardDragPending = false;
+            originalCardButton.Capture = false;
+            ghostCard = new Button
+            {
+                Width = originalCardButton.Width,
+                Height = originalCardButton.Height,
+                Text = originalCardButton.Text,
+                Font = originalCardButton.Font,
+                BackColor = originalCardButton.BackColor,
+                FlatStyle = FlatStyle.Flat,
+                BackgroundImage = originalCardButton.BackgroundImage,
+                BackgroundImageLayout = originalCardButton.BackgroundImageLayout,
+                ForeColor = Color.White
+            };
+
+            Point mousePos = PointToClient(Cursor.Position);
+            ghostCard.Location = new Point(mousePos.X - ghostCard.Width / 2, mousePos.Y - ghostCard.Height / 2);
+            Controls.Add(ghostCard);
+            ghostCard.BringToFront();
+            originalCardButton.Visible = false;
+
+            ghostCard.MouseMove += GhostCard_MouseMove;
+            ghostCard.MouseUp += GhostCard_MouseUp;
+            ghostCard.Capture = true;
         }
 
         private void GhostCard_MouseMove(object sender, MouseEventArgs e)
@@ -739,6 +817,13 @@ namespace CardChess
             {
                 ghostCard.Capture = false;
 
+                if (!IsNetworkReady())
+                {
+                    inputController.CancelSelection();
+                    FinishGhostCardDrag();
+                    return;
+                }
+
                 // 현재 마우스가 폼 전체에서 어디에 있는지 좌표 확인
                 Point formPt = this.PointToClient(Cursor.Position);
                 // 현재 마우스가 체스판(pnlBoard) 안에서 어디에 있는지 좌표 확인
@@ -755,8 +840,10 @@ namespace CardChess
                     Point handPt = pnlPlayerHand.PointToClient(Cursor.Position);
 
                     // 마우스 좌표를 이용해 카드가 놓일 가상의 '칸(인덱스)'을 계산합니다 (카드너비 80+간격10=90, 높이 120+간격10=130)
-                    int col = Math.Max(0, (handPt.X - 5) / 90);
-                    int row = Math.Max(0, (handPt.Y - 5) / 130);
+                    int cardWidth, cardHeight, spacingX, spacingY, startX, startY;
+                    GetPlayerCardLayout(out cardWidth, out cardHeight, out spacingX, out spacingY, out startX, out startY);
+                    int col = Math.Max(0, (handPt.X - startX) / Math.Max(1, cardWidth + spacingX));
+                    int row = Math.Max(0, (handPt.Y - startY) / Math.Max(1, cardHeight + spacingY));
                     int newIndex = row * 4 + col;
 
                     var myHand = gameManager.State.Hands[inputController.MyPlayerType];
@@ -773,6 +860,10 @@ namespace CardChess
                     {
                         myHand.RemoveAt(oldIndex);
                         myHand.Insert(newIndex, draggedCard);
+                        if (networkProtocol != null && networkProtocol.IsConnected)
+                        {
+                            networkProtocol.Send($"HANDORDER,{inputController.MyPlayerType},{oldIndex},{newIndex}");
+                        }
                     }
 
                     inputController.CancelSelection();
@@ -800,50 +891,63 @@ namespace CardChess
                         }
                         else
                         {
-                            if (draggedCard != null && (draggedCard.Type == CardType.ActiveSkill || draggedCard.Type == CardType.Trap))
-                            {
-                                string errorMsg;
-                                bool success = gameManager.TryUseCard(draggedCard, new Position(0, 0), out errorMsg);
-
-                                if (!success)
-                                {
-                                    AddLog($"[실패] {errorMsg}");
-                                }
-                                else
-                                {
-                                    RefreshHand();
-                                }
-                            }
+                            AddLog("카드를 보드 밖에 놓아 사용을 취소했습니다.");
                             inputController.CancelSelection();
                         }
                     }
                 }
 
-                // 가짜 분신 카드 삭제
+                FinishGhostCardDrag();
+            }
+        }
+
+        private void FinishGhostCardDrag()
+        {
+            if (ghostCard != null)
+            {
                 this.Controls.Remove(ghostCard);
                 ghostCard.Dispose();
                 ghostCard = null;
+            }
 
-                // 원본 버튼 복구
-                if (originalCardButton != null)
-                {
-                    if (!originalCardButton.IsDisposed)
-                        originalCardButton.Visible = true;
-                    originalCardButton = null;
-                }
+            isCardDragPending = false;
+            if (originalCardButton != null)
+            {
+                if (!originalCardButton.IsDisposed)
+                    originalCardButton.Visible = true;
+                originalCardButton = null;
             }
         }
 
         private void BtnPassTurn_Click(object sender, EventArgs e)
         {
+            if (!IsNetworkReady())
+                return;
+
+            if (!battleManager.IsPlayable || gameManager.CurrentTurn != inputController.MyPlayerType)
+            {
+                AddLog("지금은 턴을 종료할 수 없습니다.");
+                return;
+            }
+
             gameManager.PassTurn();
         }
 
-        private void UdpProtocol_OnMessage(string msg)
+        private bool IsNetworkReady()
+        {
+            if (networkProtocol == null || networkProtocol.IsConnected)
+                return true;
+
+            AddLog("[네트워크] 재연결 중에는 게임 조작을 할 수 없습니다.");
+            return false;
+        }
+
+        private void NetworkProtocol_OnMessage(string msg)
         {
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => UdpProtocol_OnMessage(msg)));
+                if (!IsDisposed && IsHandleCreated)
+                    this.BeginInvoke(new Action(() => NetworkProtocol_OnMessage(msg)));
                 return;
             }
 
@@ -851,25 +955,86 @@ namespace CardChess
             {
                 if (lblNetworkStatus != null)
                 {
-                    lblNetworkStatus.Text = "네트워크: 연결됨! 🟢";
+                    lblNetworkStatus.Text = "네트워크: 연결됨";
                     lblNetworkStatus.ForeColor = Color.Green;
                 }
 
-                AddLog("✨ 네트워크가 연결되었습니다! 게임을 시작하세요.");
+                AddLog("[네트워크] 상대방과 연결되었습니다.");
             }
-            else if (msg.StartsWith("MOVE"))
+            else if (msg == "SERVER_RECONNECTING" || msg == "SERVER_DISCONNECTED" || msg == "PEER_RECONNECTING")
+            {
+                if (lblNetworkStatus != null)
+                {
+                    lblNetworkStatus.Text = "네트워크: 재연결 중";
+                    lblNetworkStatus.ForeColor = Color.Goldenrod;
+                }
+
+                inputController.CancelSelection();
+                FinishGhostCardDrag();
+                AddLog(msg == "PEER_RECONNECTING"
+                    ? "[네트워크] 상대방의 연결이 끊어졌습니다. 재접속을 기다립니다."
+                    : "[네트워크] 서버 연결이 끊어져 자동 재접속 중입니다.");
+            }
+            else if (msg == "SERVER_RECONNECTED" || msg == "PEER_RECONNECTED" || msg == "REJOINED")
+            {
+                if (lblNetworkStatus != null)
+                {
+                    lblNetworkStatus.Text = "네트워크: 연결 복구됨";
+                    lblNetworkStatus.ForeColor = Color.Green;
+                }
+
+                AddLog("[네트워크] 연결이 복구되었습니다.");
+            }
+            else if (msg == "OPPONENT_DISCONNECTED")
+            {
+                AddLog("[네트워크] 상대방이 재접속 제한 시간 안에 돌아오지 않았습니다.");
+                gameManager.State.IsGameOver = true;
+                gameManager.State.Winner = inputController.MyPlayerType;
+                ShowGameEndMessageIfNeeded();
+            }
+            else if (msg == "ROOM_LOST")
+            {
+                AddLog("[네트워크] 서버가 재시작되어 기존 방을 복구할 수 없습니다.");
+                gameManager.State.IsGameOver = true;
+                gameManager.State.Winner = null;
+                ShowGameEndMessageIfNeeded();
+            }
+            else if (msg.StartsWith("MOVE,"))
             {
                 string[] p = msg.Split(',');
 
-                Position from = new Position(int.Parse(p[1]), int.Parse(p[2]));
-                Position to = new Position(int.Parse(p[3]), int.Parse(p[4]));
+                int fromRow, fromCol, toRow, toCol;
+                if (p.Length < 5 ||
+                    !int.TryParse(p[1], out fromRow) ||
+                    !int.TryParse(p[2], out fromCol) ||
+                    !int.TryParse(p[3], out toRow) ||
+                    !int.TryParse(p[4], out toCol))
+                {
+                    AddLog("[네트워크] 잘못된 이동 패킷을 무시했습니다.");
+                    return;
+                }
+
+                Position from = new Position(fromRow, fromCol);
+                Position to = new Position(toRow, toCol);
+                if (!gameManager.State.IsWithinBoard(from) || !gameManager.State.IsWithinBoard(to))
+                {
+                    AddLog("[네트워크] 보드 범위를 벗어난 이동 패킷을 무시했습니다.");
+                    return;
+                }
+
+                gameManager.QueueRandomResults(ParseRandomResults(p, 5));
 
                 gameManager.IsLocalAction = false;
-
                 string networkMoveMessage;
-                bool networkMoveSuccess = gameManager.TryMoveOrAttack(from, to, out networkMoveMessage);
-
-                gameManager.IsLocalAction = true;
+                bool networkMoveSuccess;
+                try
+                {
+                    networkMoveSuccess = gameManager.TryMoveOrAttack(from, to, out networkMoveMessage);
+                }
+                finally
+                {
+                    gameManager.IsLocalAction = true;
+                }
 
                 AddLog($"[네트워크] 상대방이 ({from.Row}, {from.Col})에서 ({to.Row}, {to.Col})(으)로 기물을 이동했습니다.");
 
@@ -891,12 +1056,28 @@ namespace CardChess
 
                 ShowGameEndMessageIfNeeded();
             }
-            else if (msg.StartsWith("CARD"))
+            else if (msg.StartsWith("CARD,"))
             {
                 string[] p = msg.Split(',');
 
+                int targetRow, targetCol;
+                if (p.Length < 4 ||
+                    !int.TryParse(p[2], out targetRow) ||
+                    !int.TryParse(p[3], out targetCol))
+                {
+                    AddLog("[네트워크] 잘못된 카드 패킷을 무시했습니다.");
+                    return;
+                }
+
                 string cardName = p[1];
-                Position target = new Position(int.Parse(p[2]), int.Parse(p[3]));
+                Position target = new Position(targetRow, targetCol);
+                if (!gameManager.State.IsWithinBoard(target))
+                {
+                    AddLog("[네트워크] 보드 범위를 벗어난 카드 패킷을 무시했습니다.");
+                    return;
+                }
+
+                gameManager.QueueRandomResults(ParseRandomResults(p, 4));
 
                 ICard cardToUse = gameManager.State.Hands[gameManager.CurrentTurn]
                     .FirstOrDefault(c => c.Name == cardName);
@@ -906,9 +1087,15 @@ namespace CardChess
                     gameManager.IsLocalAction = false;
 
                     string networkCardMessage;
-                    bool networkCardSuccess = gameManager.TryUseCard(cardToUse, target, out networkCardMessage);
-
-                    gameManager.IsLocalAction = true;
+                    bool networkCardSuccess;
+                    try
+                    {
+                        networkCardSuccess = gameManager.TryUseCard(cardToUse, target, out networkCardMessage);
+                    }
+                    finally
+                    {
+                        gameManager.IsLocalAction = true;
+                    }
 
                     AddLog($"[네트워크] 상대방이 '{cardName}' 카드를 사용했습니다!");
 
@@ -940,17 +1127,47 @@ namespace CardChess
 
                 ShowGameEndMessageIfNeeded();
             }
+            else if (msg.StartsWith("HANDORDER,"))
+            {
+                string[] p = msg.Split(',');
+                PlayerType player;
+                int oldIndex, newIndex;
+                if (p.Length == 4 &&
+                    Enum.TryParse(p[1], out player) &&
+                    int.TryParse(p[2], out oldIndex) &&
+                    int.TryParse(p[3], out newIndex) &&
+                    player != inputController.MyPlayerType &&
+                    gameManager.State.Hands.ContainsKey(player))
+                {
+                    List<ICard> hand = gameManager.State.Hands[player];
+                    if (oldIndex >= 0 && oldIndex < hand.Count && newIndex >= 0 && newIndex < hand.Count)
+                    {
+                        ICard movedCard = hand[oldIndex];
+                        hand.RemoveAt(oldIndex);
+                        hand.Insert(newIndex, movedCard);
+                        RefreshHand();
+                    }
+                }
+            }
             // 상대방이 보낸 채팅 수신
             else if (msg.StartsWith("CHAT,"))
             {
                 // "CHAT," 이후의 메시지 본문만 잘라내기
-                string chatText = msg.Substring(5);
+                string chatText = SanitizeChatMessage(msg.Substring(5));
 
                 // 내가 Player1이면 상대는 Player2
                 PlayerType opponent = (inputController.MyPlayerType == PlayerType.Player1) ? PlayerType.Player2 : PlayerType.Player1;
 
                 // 로그창에 띄워주기
                 AddLog($"[{opponent}] : {chatText}");
+            }
+            else if (msg.StartsWith("NETWORK_WARNING,"))
+            {
+                AddLog("[네트워크 경고] " + msg.Substring("NETWORK_WARNING,".Length));
+            }
+            else if (msg.StartsWith("SEND_FAILED,"))
+            {
+                AddLog("[네트워크 오류] " + msg.Substring("SEND_FAILED,".Length));
             }
             else if (msg == "PASS")
             {
@@ -1200,13 +1417,44 @@ namespace CardChess
         // 폼이 닫힐 때(게임이 끝날 때) 무조건 실행되는 안전장치
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            if (udpProtocol != null)
+            if (gameLoopTimer != null)
             {
-                // 상대방에게 "나 나간다!" 라고 알려주고 통신선을 끊음
-                if (udpProtocol.IsConnected) udpProtocol.Send("SURRENDER");
-                udpProtocol.Close();
+                gameLoopTimer.Stop();
+                gameLoopTimer.Dispose();
+                gameLoopTimer = null;
+            }
+
+            if (networkProtocol != null)
+            {
+                networkProtocol.OnMessage -= NetworkProtocol_OnMessage;
+                if (networkProtocol.IsConnected && !surrenderSent &&
+                    (gameManager == null || !gameManager.State.IsGameOver))
+                {
+                    networkProtocol.Send("SURRENDER");
+                    surrenderSent = true;
+                }
+                networkProtocol.Close();
             }
             base.OnFormClosed(e);
+        }
+
+        public void SurrenderAndClose()
+        {
+            if (!surrenderSent && networkProtocol != null && networkProtocol.IsConnected)
+            {
+                networkProtocol.Send("SURRENDER");
+                surrenderSent = true;
+            }
+
+            if (gameManager != null)
+            {
+                gameManager.State.IsGameOver = true;
+                gameManager.State.Winner = inputController.MyPlayerType == PlayerType.Player1
+                    ? PlayerType.Player2
+                    : PlayerType.Player1;
+            }
+
+            Close();
         }
 
         private void CardButton_MouseEnter(object sender, EventArgs e)
@@ -1242,11 +1490,19 @@ namespace CardChess
         // 단축키(키보드 1~8)로 손패 선택 및 ESC 취소 기능
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (txtChatInput != null && txtChatInput.Focused && keyData == Keys.Escape)
+            {
+                pnlBoard.Focus();
+                return true;
+            }
+
             // 채팅창에 글 쓸때는 숫자키 무시
             if (txtChatInput != null && txtChatInput.Focused)
             {
                 return base.ProcessCmdKey(ref msg, keyData);
             }
+            if (!IsNetworkReady())
+                return true;
             // 내 턴이 아니거나 조작 불가능한 상태면 키보드 입력 무시
             if (!battleManager.IsPlayable || gameManager.CurrentTurn != inputController.MyPlayerType)
                 return base.ProcessCmdKey(ref msg, keyData);
@@ -1311,16 +1567,23 @@ namespace CardChess
             {
                 e.SuppressKeyPress = true; // 윈도우 특유의 에러 비프음 방지
 
-                string chatMsg = txtChatInput.Text.Trim();
+                if (!IsNetworkReady())
+                    return;
+
+                string chatMsg = SanitizeChatMessage(txtChatInput.Text);
                 if (!string.IsNullOrEmpty(chatMsg))
                 {
+                    if (txtChatInput.Text.Trim().Length > MaxChatLength)
+                    {
+                        AddLog($"[채팅] 메시지는 {MaxChatLength}자까지만 전송됩니다.");
+                    }
                     // 1. 내 화면 로그창에 먼저 띄우기
                     AddLog($"[{inputController.MyPlayerType}] : {chatMsg}");
 
                     // 2. 상대방에게 네트워크 전달 ("CHAT,메시지" 형태)
-                    if (udpProtocol != null && udpProtocol.IsConnected)
+                    if (networkProtocol != null && networkProtocol.IsConnected)
                     {
-                        udpProtocol.Send($"CHAT,{chatMsg}");
+                        networkProtocol.Send($"CHAT,{chatMsg}");
                     }
 
                     // 3. 보냈으니 입력창 비우기
@@ -1329,10 +1592,47 @@ namespace CardChess
             }
         }
 
+        private List<int> ParseRandomResults(string[] parts, int startIndex)
+        {
+            List<int> results = new List<int>();
+            for (int i = startIndex; i < parts.Length; i++)
+            {
+                if (!parts[i].StartsWith("R:"))
+                    continue;
+
+                string[] values = parts[i].Substring(2).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string valueText in values)
+                {
+                    int value;
+                    if (int.TryParse(valueText, out value))
+                    {
+                        results.Add(value);
+                    }
+                }
+            }
+            return results;
+        }
+
+        private string SanitizeChatMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return "";
+
+            string cleaned = new string(message
+                .Where(c => !char.IsControl(c) || c == '\t')
+                .ToArray())
+                .Trim();
+
+            return cleaned.Length <= MaxChatLength
+                ? cleaned
+                : cleaned.Substring(0, MaxChatLength);
+        }
+
         // 선택된 카드 시각적 강조 (위로 15px 띄우고 황금색 테두리)
         private void HighlightSelectedCard()
         {
-            int cardHeight = 120, spacingY = 10, startY = 10;
+            int cardWidth, cardHeight, spacingX, spacingY, startX, startY;
+            GetPlayerCardLayout(out cardWidth, out cardHeight, out spacingX, out spacingY, out startX, out startY);
             PlayerType myType = inputController.MyPlayerType;
 
             if (!gameManager.State.Hands.ContainsKey(myType)) return;
@@ -1363,6 +1663,27 @@ namespace CardChess
                     }
                 }
             }
+        }
+
+        private void GetPlayerCardLayout(
+            out int cardWidth,
+            out int cardHeight,
+            out int spacingX,
+            out int spacingY,
+            out int startX,
+            out int startY)
+        {
+            float scaleX = ClientSize.Width / (float)DesignClientWidth;
+            float scaleY = ClientSize.Height / (float)DesignClientHeight;
+            spacingX = Math.Max(4, (int)Math.Round(10 * scaleX));
+            spacingY = Math.Max(4, (int)Math.Round(10 * scaleY));
+            startX = Math.Max(4, (int)Math.Round(10 * scaleX));
+            startY = Math.Max(4, (int)Math.Round(10 * scaleY));
+
+            int cardAreaWidth = Math.Max(200, pnlPlayerDeck.Left - startX);
+            cardWidth = Math.Max(32, (cardAreaWidth - startX - spacingX * 3) / 4);
+            int maxCardHeight = Math.Max(50, (pnlPlayerHand.Height - startY * 2 - spacingY) / 2);
+            cardHeight = Math.Max(48, Math.Min(maxCardHeight, (int)Math.Round(cardWidth * 1.5)));
         }
 
         private void ShowCardDescription(ICard card)

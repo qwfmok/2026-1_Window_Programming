@@ -22,8 +22,21 @@ namespace CardChess.Cards
             Description = description;
         }
 
-        // 액티브 스킬은 보드의 위치와 관계없이 항시 발동 가능하도록
-        public bool CanUse(Position targetPos, GameState state) => true; // 액티브 스킬은 보드의 위치와 관계없이 항시 발동 가능하도록
+        public bool CanUse(Position targetPos, GameState state)
+        {
+            PlayerType myPlayer = state.CurrentTurn;
+            PlayerType enemyPlayer = myPlayer == PlayerType.Player1 ? PlayerType.Player2 : PlayerType.Player1;
+
+            switch (Name)
+            {
+                case "카드 뺏기":
+                    return state.Hands[myPlayer].Count < 8 && state.Hands[enemyPlayer].Count > 0;
+                case "랜덤 시전":
+                    return state.SharedDeck.Count >= 2;
+                default:
+                    return true;
+            }
+        }
 
         public void Execute(Position targetPos, GameState state, CardManager cardManager)
         {
@@ -39,10 +52,11 @@ namespace CardChess.Cards
                 PlayerType myPlayer = state.CurrentTurn;
                 if (state.Hands.ContainsKey(myPlayer))
                 {
-                    int myDrawCount = state.Hands[myPlayer].Count - 1;
-                    state.DiscardPile.AddRange(state.Hands[myPlayer]);
+                    int myDrawCount = state.Hands[myPlayer].Count;
+                    List<ICard> cardsToDiscard = state.Hands[myPlayer].ToList();
                     state.Hands[myPlayer].Clear();
                     if (myDrawCount > 0) cardManager.DrawMultiple(myPlayer, myDrawCount);
+                    state.DiscardPile.AddRange(cardsToDiscard);
                 }
                 MainForm.Instance.AddLog($"[손패 교환] 발동! {state.CurrentTurn}가 손패를 모두 버리고 새로 뽑았습니다.");
             }
@@ -99,34 +113,31 @@ namespace CardChess.Cards
                     for (int i = 0; i < 2; i++)
                     {
                         ICard randomCard = state.SharedDeck.Pop();
-                        state.DiscardPile.Add(randomCard);
-
-                        // 타겟이 필요한 카드일 경우를 대비하여 무작위 좌표 지정
-                        Position randomPos = new Position(state.SharedRandom.Next(0, 8), state.SharedRandom.Next(0, 8));
-
-                        // 보드 전체를 순회하면서 폰 탐색
-                        if (randomCard.Type == CardType.Evolution)
+                        List<Position> validTargets = new List<Position>();
+                        for (int r = 0; r < 8; r++)
                         {
-                            var pawns = new List<Position>();
-                            for (int r = 0; r < 8; r++)
+                            for (int c = 0; c < 8; c++)
                             {
-                                for (int c = 0; c < 8; c++)
+                                Position candidate = new Position(r, c);
+                                if (randomCard.CanUse(candidate, state))
                                 {
-                                    Position p = new Position(r, c);
-                                    if (state.IsAllyPiece(p, myPlayer) && state.GetPieceAt(p).Type == PieceType.Pawn)
-                                    {
-                                        pawns.Add(p);
-                                    }
+                                    validTargets.Add(candidate);
                                 }
-                            }
-                            if (pawns.Count > 0)
-                            {
-                                randomPos = pawns[state.SharedRandom.Next(0, pawns.Count)];
                             }
                         }
 
-                        MainForm.Instance.AddLog($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
-                        randomCard.Execute(randomPos, state, cardManager);
+                        if (validTargets.Count > 0)
+                        {
+                            Position randomPos = validTargets[state.SharedRandom.Next(validTargets.Count)];
+                            MainForm.Instance.AddLog($" -> 무작위 발동 [{i + 1}번]: {randomCard.Name} (타겟 좌표: {randomPos.Row}, {randomPos.Col})");
+                            randomCard.Execute(randomPos, state, cardManager);
+                        }
+                        else
+                        {
+                            MainForm.Instance.AddLog($" -> [{randomCard.Name}]은 현재 사용할 수 있는 대상이 없어 발동되지 않았습니다.");
+                        }
+
+                        state.DiscardPile.Add(randomCard);
                     }
                 }
                 else

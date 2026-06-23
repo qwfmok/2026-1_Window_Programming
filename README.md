@@ -13,7 +13,7 @@
 ### ✨ 핵심 시스템
 * **🔄 진화 시스템:** 킹과 퀸을 제외한 모든 기물은 '폰(Pawn)'으로 시작하며, 카드를 사용하여 룩, 나이트, 비숍 등으로 자유롭게 진화시킬 수 있습니다.
 * **🃏 스킬 카드 (OTK 방지 밸런스):** 전황을 뒤집는 다양한 마법/함정 카드가 존재합니다. 게임 템포 조절을 위해 **'1턴당 1마법 사용 제한'**이 적용되어 있습니다.
-* **🌐 로컬 네트워크 멀티플레이:** UDP 프로토콜 통신을 기반으로 같은 와이파이의 두 대의 PC에서 실시간 1:1 대전이 가능합니다. (실시간 채팅 기능 지원)
+* **🌐 온라인 멀티플레이:** ASP.NET Core 8 SignalR 중계 서버를 통해 서로 다른 네트워크의 두 PC에서 6자리 방 코드로 1:1 대전과 채팅을 할 수 있습니다.
 * **📖 인게임 가이드 및 환경설정:** 별도의 설명서 허브(Manual Hub) UI를 구축하여 기물, 카드, 규칙을 쉽게 열람할 수 있으며, 인게임 설정창에서 BGM/효과음 볼륨과 화면 모드를 조절할 수 있습니다.
 
 ### 🏆 승리 조건
@@ -36,7 +36,7 @@
 * **Language:** C#
 * **Framework:** .NET (Windows Forms)
 * **IDE:** Visual Studio 2022
-* **Network:** UDP Socket Programming
+* **Network:** ASP.NET Core 8 SignalR
 * **VCS:** Git & GitHub
 
 ---
@@ -47,7 +47,7 @@
 | :--- | :--- | :--- |
 | **김재민(조장)** | System Architect | 인게임 플레이 UI(보드, 덱, 손패 제한) 레이아웃 최적화, 턴 진행 흐름(행동 및 턴 종료) 분리 제어, 승리 판정 및 체크/체크메이트 위험 구역 시각화 |
 | **박정우** | Game Logic & UI/UX | 기물 상속 구조 및 이동/공격 로직 구현, 17종 마법/함정 카드 로직 연동 및 1턴 사용 제한(밸런스) 적용, 설명서 UI 뼈대 구축 및 인게임/설정창 리팩토링 |
-| **장현빈** | Input & Network | 상태 머신 기반 드래그 앤 드롭 제어 및 단축키 적용, 인게임 로그 및 UDP P2P 통신망 구축, 난수 동기화(SharedRandom) 및 덱 재사용(무덤) 시스템 구현 |
+| **장현빈** | Input & Network | 상태 머신 기반 드래그 앤 드롭 제어 및 단축키 적용, 인게임 로그 및 네트워크 통신망 구축, 난수 동기화(SharedRandom) 및 덱 재사용(무덤) 시스템 구현 |
 | **전경원** | Design & Effect | 전체 비주얼 에셋 디자인 및 기물 상태별 애니메이션 렌더링, 사운드 매니저(BGM/SFX) 설계 및 연동, 스킬 이펙트 프레임 제어 및 초기 매치메이킹 연동 |
 
 ---
@@ -60,7 +60,9 @@
 CardChess/
 │
 ├─ Cards/           # 카드 시스템 구현체 (Active, Evolution, Field, Target, Trap 등)
-├─ Core/            # 게임 코어 로직 (GameManager, BattleManager, TurnManager, UDPprotocol)
+├─ Core/            # 게임 코어 로직 (GameManager, BattleManager, TurnManager, NetworkSettings)
+├─ Network/         # SignalR 클라이언트 및 자동 재접속 처리
+├─ Server/          # ASP.NET Core 8 SignalR 방/중계 서버
 ├─ Input/           # 사용자 마우스/키보드 입력 제어 (InputController)
 ├─ Menu/            # 게임 외적 기능 (SettingsMenu, SoundsManager, Surrender)
 ├─ Models/          # 데이터 구조 및 열거형 (GameState, Position, CardType, PlayerType 등)

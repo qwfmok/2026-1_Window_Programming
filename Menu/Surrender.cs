@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using CardChess.Networking;
 
 // 행복 버튼 ㅋ
 
@@ -14,7 +15,7 @@ namespace CardChess.Menu
 {
     internal class Surrender
     {
-        public static void AddSurrenderButton(Form mainForm, UDPprotocol udpProtocol)
+        public static void AddSurrenderButton(Form mainForm, SignalRProtocol networkProtocol)
         {
             // 버튼 크기와 위치 좌표 정의 및 폼 디자인 설정
             Button btnSurrender = new Button();
@@ -47,20 +48,20 @@ namespace CardChess.Menu
             btnSurrender.Click += (sender, e) =>
             {
                 MessageBox.Show("항복했습니다.", "게임 종료", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                if (udpProtocol != null)
+                if (networkProtocol != null)
                 {
                     try
                     {
                         // 만약 상대방에게 나 나간다 라고 항복 패킷을 쏴줘야 한다면 아래 주석 해제
-                        // if (udpProtocol.IsConnected) udpProtocol.Send("SURRENDER_EXIT");
+                        // if (networkProtocol.IsConnected) networkProtocol.Send("SURRENDER");
 
-                        // UDPprotocol 내부에 소켓을 닫는 Close()나 Disconnect() 메서드가 있다면 호출
+                        // 게임 화면이 연결 종료를 담당하므로 여기서는 직접 닫지 않는다.
                         // (클래스 내부에 명칭이 다를 수 있으니 확인 후 소켓 Close 함수를 여기에 적어주세요)
-                        // udpProtocol.Close(); 
+                        // networkProtocol.Close();
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"UDP 종료 중 오류 발생: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"네트워크 종료 중 오류 발생: {ex.Message}");
                     }
                 }
 

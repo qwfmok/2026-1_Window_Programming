@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.37012.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardChess", "CardChess.csproj", "{E785F42C-2079-4764-8954-4128ED38D3F8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardChess.Networking", "Network\CardChess.Networking\CardChess.Networking.csproj", "{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "솔루션 항목", "솔루션 항목", "{2A3A057F-5D22-31FD-628C-DF5EF75AEF1E}"
 EndProject
 Global
@@ -17,6 +19,10 @@ Global
 		{E785F42C-2079-4764-8954-4128ED38D3F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E785F42C-2079-4764-8954-4128ED38D3F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E785F42C-2079-4764-8954-4128ED38D3F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

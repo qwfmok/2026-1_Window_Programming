@@ -1,5 +1,7 @@
 ﻿using CardChess.Core;
 using CardChess.Models;
+using CardChess.Networking;
+using CardChess.View;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -25,7 +27,7 @@ namespace CardChess
         private Image imgExit;
 
         // 네트워크 통신 관련 컨트롤
-        private UDPprotocol udpProtocol;
+        private SignalRProtocol networkProtocol;
         private PlayerType myPlayerType;
         private TextBox txtNetworkCode;
         private Label lblNetworkStatus;
@@ -89,6 +91,7 @@ namespace CardChess
 
             this.Controls.Add(btnSettings);
             btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
+            ResponsiveLayout.Attach(this, new Size(1584, 861));
         }
         
         // 간단하게 로드 게임 에셋으로 시작
@@ -148,17 +151,17 @@ namespace CardChess
 
             if (imgRoomCreate != null) // 방만들기 버튼이 비어있다면
             {
-                rects["Create"] = new Rectangle(currentX, buttonY, imgRoomCreate.Width, imgRoomCreate.Height);
+                rects["Create"] = ScaleDesignRectangle(new Rectangle(currentX, buttonY, imgRoomCreate.Width, imgRoomCreate.Height));
                 currentX += imgRoomCreate.Width + gap; // 다음 버튼은 버튼의 와이드값 + gap만큼인데 gap이 80이니까 쉽게 말해서 80px 뒤에 배치하란 뜻
             }
             if (imgRoomJoin != null) // 그 다음은 방 들어가기 버튼인데
             {
-                rects["Join"] = new Rectangle(currentX, buttonY, imgRoomJoin.Width, imgRoomJoin.Height);
+                rects["Join"] = ScaleDesignRectangle(new Rectangle(currentX, buttonY, imgRoomJoin.Width, imgRoomJoin.Height));
                 currentX += imgRoomJoin.Width + gap; // 똑같음
             }
             if (imgGameStart != null) // 게임 시작
             {
-                rects["Start"] = new Rectangle(currentX, buttonY, imgGameStart.Width, imgGameStart.Height);
+                rects["Start"] = ScaleDesignRectangle(new Rectangle(currentX, buttonY, imgGameStart.Width, imgGameStart.Height));
                 // [핵심] 메뉴얼 버튼은 가로 스크롤(currentX) 로직 밖으로 빼서 독립적으로 계산합니다!
                 if (imgManual != null)
                 {
@@ -168,21 +171,32 @@ namespace CardChess
                     // 게임 시작 버튼 Y좌표에서 위로 20픽셀만큼 띄워서 배치
                     int manualY = buttonY - imgManual.Height - 20;
 
-                    rects["Manual"] = new Rectangle(manualX, manualY, imgManual.Width, imgManual.Height);
+                    rects["Manual"] = ScaleDesignRectangle(new Rectangle(manualX, manualY, imgManual.Width, imgManual.Height));
                 }
                 currentX += imgGameStart.Width + gap;
             }
             if (imgCredit != null) // 크레딧
             {
-                rects["Credit"] = new Rectangle(currentX, buttonY, imgCredit.Width, imgCredit.Height);
+                rects["Credit"] = ScaleDesignRectangle(new Rectangle(currentX, buttonY, imgCredit.Width, imgCredit.Height));
                 currentX += imgCredit.Width + gap;
             }
             if (imgExit != null) // 나가기
             {
-                rects["Exit"] = new Rectangle(currentX, buttonY, imgExit.Width, imgExit.Height);
+                rects["Exit"] = ScaleDesignRectangle(new Rectangle(currentX, buttonY, imgExit.Width, imgExit.Height));
             }
 
             return rects;
+        }
+
+        private Rectangle ScaleDesignRectangle(Rectangle designRect)
+        {
+            float scaleX = ClientSize.Width / 1584f;
+            float scaleY = ClientSize.Height / 861f;
+            return new Rectangle(
+                (int)Math.Round(designRect.X * scaleX),
+                (int)Math.Round(designRect.Y * scaleY),
+                Math.Max(1, (int)Math.Round(designRect.Width * scaleX)),
+                Math.Max(1, (int)Math.Round(designRect.Height * scaleY)));
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -191,7 +205,7 @@ namespace CardChess
 
             // 방 번호 발급받는 텍스트 박스 감싸주는 UI에 관한 코드다요
             if (backgroundBg != null) e.Graphics.DrawImage(backgroundBg, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
-            if (Barimg != null) e.Graphics.DrawImage(Barimg, 77, 592, 166, 37);
+            if (Barimg != null) e.Graphics.DrawImage(Barimg, ScaleDesignRectangle(new Rectangle(77, 592, 166, 37)));
 
             // 
             var rects = CalculateButtonRects();
@@ -273,82 +287,147 @@ namespace CardChess
             this.Invalidate();
         }
 
-        private void HandleRoomCreate() // 방 만드는 핸들러
+        private async void HandleRoomCreate() // 방 만드는 핸들러
         {
-            // 버그 고침 두번눌러도 안튕기게
-            if (udpProtocol != null)
+            try
             {
-                udpProtocol.Close();
+                ResetNetworkProtocol();
+                lblNetworkStatus.Text = "온라인 서버 연결 중...";
+                lblNetworkStatus.ForeColor = Color.White;
+                string roomCode = await networkProtocol.CreateRoomAsync();
+                if (string.IsNullOrEmpty(roomCode))
+                    return;
+
+                txtNetworkCode.Text = roomCode;
+                lblNetworkStatus.Text = "방 생성 완료 - 상대방을 기다리는 중";
+                lblNetworkStatus.ForeColor = Color.LightSkyBlue;
+                myPlayerType = PlayerType.Player1;
             }
-            udpProtocol = new UDPprotocol();
-            udpProtocol.OnMessage += UdpProtocol_OnMessage;
-
-            // 6자리 무작위 난수(100000 ~ 999999) 생성 로직 추가
-            Random rand = new Random();
-            string randomCode = rand.Next(100000, 1000000).ToString();
-
-            // 생성된 난수를 텍스트 박스에 기입
-            txtNetworkCode.Text = randomCode;
-
-            // 기존 호스트 통신 시작 함수 호출
-            udpProtocol.Starthostip();
-
-            lblNetworkStatus.Text = "호스트 대기중... (코드 전달)";
-            myPlayerType = PlayerType.Player1;
+            catch (Exception ex)
+            {
+                lblNetworkStatus.Text = "방 생성 실패: " + ex.Message;
+                lblNetworkStatus.ForeColor = Color.LightCoral;
+            }
         }
 
-        private void HandleRoomJoin() // 접속 핸들러
+        private async void HandleRoomJoin() // 접속 핸들러
         {
             string code = txtNetworkCode.Text.Trim();
-            if (string.IsNullOrEmpty(code))
+            if (code.Length != 6 || !int.TryParse(code, out _))
             {
-                MessageBox.Show("접속 코드를 입력해주세요!");
+                MessageBox.Show("숫자 6자리 방 코드를 입력해주세요!");
                 return;
             }
-            // 버그 고침 두번눌러도 안튕기게
-            if (udpProtocol != null)
+
+            try
             {
-                udpProtocol.Close();
+                ResetNetworkProtocol();
+                lblNetworkStatus.Text = "온라인 서버 연결 중...";
+                lblNetworkStatus.ForeColor = Color.White;
+                bool joined = await networkProtocol.JoinRoomAsync(code);
+                if (!joined)
+                    return;
+
+                txtNetworkCode.Text = networkProtocol.RoomCode;
+                myPlayerType = PlayerType.Player2;
             }
-
-            udpProtocol = new UDPprotocol();
-            udpProtocol.OnMessage += UdpProtocol_OnMessage;
-
-            udpProtocol.Joinguestip(code);
-            lblNetworkStatus.Text = "서버 접속 시도중...";
-            myPlayerType = PlayerType.Player2;
+            catch (Exception ex)
+            {
+                lblNetworkStatus.Text = "방 참여 실패: " + ex.Message;
+                lblNetworkStatus.ForeColor = Color.LightCoral;
+            }
         }
 
-        private void UdpProtocol_OnMessage(string msg)
+        private void ResetNetworkProtocol()
+        {
+            if (networkProtocol != null)
+            {
+                networkProtocol.OnMessage -= NetworkProtocol_OnMessage;
+                networkProtocol.Close();
+            }
+
+            networkProtocol = new SignalRProtocol(NetworkSettings.SignalRServerUrl);
+            networkProtocol.OnMessage += NetworkProtocol_OnMessage;
+        }
+
+        private void NetworkProtocol_OnMessage(string msg)
         {
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => UdpProtocol_OnMessage(msg)));
+                if (!IsDisposed && IsHandleCreated)
+                    this.BeginInvoke(new Action(() => NetworkProtocol_OnMessage(msg)));
                 return;
             }
 
-            // 1. 연결 성공 패킷 처리
             if (msg == "CONNECTED")
             {
                 lblNetworkStatus.Text = "네트워크: 연결됨! 🟢";
                 lblNetworkStatus.ForeColor = Color.LightGreen;
-                this.Invalidate(); // 버튼 상태(활성화 등)를 다시 그리기 위해 화면 갱신
+                this.Invalidate();
             }
-            // 2. 방장이 보낸 게임 시작 동기화 패킷 처리 (게스트용)
+            else if (msg == "SERVER_CONNECTING")
+            {
+                lblNetworkStatus.Text = "서버를 깨우는 중... 최대 1분 정도 걸릴 수 있습니다.";
+                lblNetworkStatus.ForeColor = Color.Khaki;
+            }
+            else if (msg.StartsWith("SERVER_RETRYING,"))
+            {
+                lblNetworkStatus.Text = "무료 서버 시작 대기 중... 자동으로 재시도합니다.";
+                lblNetworkStatus.ForeColor = Color.Khaki;
+            }
+            else if (msg == "SERVER_CONNECTED")
+            {
+                lblNetworkStatus.Text = "서버 연결됨 - 방 정보를 처리하는 중";
+                lblNetworkStatus.ForeColor = Color.LightSkyBlue;
+            }
+            else if (msg.StartsWith("ROOM_CREATED,"))
+            {
+                txtNetworkCode.Text = msg.Substring("ROOM_CREATED,".Length);
+            }
+            else if (msg.StartsWith("ROOM_JOINED,"))
+            {
+                txtNetworkCode.Text = msg.Substring("ROOM_JOINED,".Length);
+            }
+            else if (msg.StartsWith("CONNECTION_REJECTED,"))
+            {
+                lblNetworkStatus.Text = msg.Substring("CONNECTION_REJECTED,".Length);
+                lblNetworkStatus.ForeColor = Color.LightCoral;
+            }
+            else if (msg == "PEER_RECONNECTING" || msg == "SERVER_RECONNECTING" || msg == "SERVER_DISCONNECTED")
+            {
+                lblNetworkStatus.Text = "연결이 끊겨 재접속 중입니다...";
+                lblNetworkStatus.ForeColor = Color.Khaki;
+            }
+            else if (msg == "PEER_RECONNECTED" || msg == "REJOINED")
+            {
+                lblNetworkStatus.Text = "네트워크: 재연결됨! 🟢";
+                lblNetworkStatus.ForeColor = Color.LightGreen;
+            }
+            else if (msg == "OPPONENT_DISCONNECTED" || msg == "ROOM_LOST")
+            {
+                lblNetworkStatus.Text = "방 연결이 종료되었습니다.";
+                lblNetworkStatus.ForeColor = Color.LightCoral;
+            }
             else if (msg.StartsWith("START"))
             {
-                // 방장이 보낸 패킷(START,12345)을 쪼개서 내 시드로함
                 string[] parts = msg.Split(',');
-                if (parts.Length > 1)
+                int parsedSeed;
+                if (parts.Length > 1 && int.TryParse(parts[1], out parsedSeed))
                 {
-                    sharedSeed = int.Parse(parts[1]);
+                    sharedSeed = parsedSeed;
+                    LaunchMainGame();
                 }
-                LaunchMainGame();
             }
         }
 
         private void HandleGameStart()
         {
+            if (networkProtocol == null || !networkProtocol.IsConnected)
+            {
+                MessageBox.Show("상대방이 연결될 때까지 기다려주세요!", "연결 대기", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (myPlayerType == PlayerType.Player2)
             {
                 MessageBox.Show("방장(Host)이 게임을 시작할 때까지 대기해 주세요!", "대기 중", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -358,8 +437,11 @@ namespace CardChess
             {
                 // 방장만 무작위 시드 생성
                 sharedSeed = new Random().Next(10000, 99999);
-                // 상대방한테 시드 쏘기
-                udpProtocol.Send($"START,{sharedSeed}");
+                if (!networkProtocol.Send($"START,{sharedSeed}"))
+                {
+                    MessageBox.Show("게임 시작 정보를 상대에게 보내지 못했습니다.");
+                    return;
+                }
             }
             LaunchMainGame();
         }
@@ -367,9 +449,9 @@ namespace CardChess
         // 로비에서 창을 강제로 'X' 눌러서 껐을 때 통신 포트를 완벽하게 닫아줌
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            if (udpProtocol != null)
+            if (networkProtocol != null)
             {
-                udpProtocol.Close();
+                networkProtocol.Close();
             }
             base.OnFormClosed(e);
         }
@@ -380,18 +462,18 @@ namespace CardChess
             isGameLaunched = true;
 
             // 메인 폼으로 넘어갈 때 기존 로비의 수신기를 끔
-            udpProtocol.OnMessage -= UdpProtocol_OnMessage;
-            MainForm gameForm = new MainForm(udpProtocol, myPlayerType, sharedSeed);
+            networkProtocol.OnMessage -= NetworkProtocol_OnMessage;
+            MainForm gameForm = new MainForm(networkProtocol, myPlayerType, sharedSeed);
 
             this.Hide();           // 로비 화면을 잠깐 숨김
             gameForm.ShowDialog(); //  게임 화면을 띄움 (게임이 끝날 때까지 여기서 코드가 멈춤)
 
 
             // 네트워크 상태 초기화 및 소켓 닫기
-            if (udpProtocol != null)
+            if (networkProtocol != null)
             {
-                udpProtocol.Close();
-                udpProtocol = null;
+                networkProtocol.Close();
+                networkProtocol = null;
             }
 
             // 라벨을 오프라인으로 돌려서 시작 버튼 자동 잠금

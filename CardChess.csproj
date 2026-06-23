@@ -65,6 +65,7 @@
       <HintPath>packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
     </Reference>
@@ -110,7 +111,7 @@
     <Compile Include="Core\BattleManager.cs" />
     <Compile Include="Core\BoardManager.cs" />
     <Compile Include="Core\CardManager.cs" />
-    <Compile Include="Core\UDPprotocol.cs" />
+    <Compile Include="Core\NetworkSettings.cs" />
     <Compile Include="Core\GameManager.cs" />
     <Compile Include="Core\TurnManager.cs" />
     <Compile Include="Form1.cs">
@@ -170,6 +171,7 @@
     <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="UI\ResponsiveLayout.cs" />
     <EmbeddedResource Include="CardManual.resx">
       <DependentUpon>CardManual.cs</DependentUpon>
     </EmbeddedResource>
@@ -212,11 +214,28 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="Network\CardChess.Networking\CardChess.Networking.csproj">
+      <Project>{B91F2F5A-28B1-4A71-98EF-81E49A1D2F6C}</Project>
+      <Name>CardChess.Networking</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.28" />
+  </ItemGroup>
+  <ItemGroup>
     <Folder Include="Resources\Images\" />
     <Folder Include="Resources\Sounds\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="CardChess.ico" />
   </ItemGroup>
+  <Target Name="CopyReleaseRuntimeAssets" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ReleaseAsset Include="$(ProjectDir)bin\Debug\Assets\**\*" />
+      <ReleaseSound Include="$(ProjectDir)bin\Debug\Sounds\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ReleaseAsset)" DestinationFiles="@(ReleaseAsset->'$(OutputPath)Assets\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ReleaseSound)" DestinationFiles="@(ReleaseSound->'$(OutputPath)Sounds\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

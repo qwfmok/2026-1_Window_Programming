@@ -82,7 +82,7 @@ namespace CardChess
 
             this.Controls.Add(btnSettings);
             btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
-
+            CardChess.View.ResponsiveLayout.Attach(this, new Size(1584, 861));
         }
         private void LoadGameAssets()
         {
@@ -220,7 +220,7 @@ namespace CardChess
                 // 3. 텍스트 교체 호출
                 SetDescription(pieceType);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // 로드 에러 무시
             }
@@ -243,7 +243,7 @@ namespace CardChess
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 14f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 이동: 앞으로 딱 1칸만 전진할 수 있습니다. (단, 첫 이동 시에는 2칸 전진 가능)\n");
+                    rtbDescription.AppendText("• 이동: 앞으로 딱 1칸만 전진할 수 있습니다.\n");
                     rtbDescription.AppendText("• 공격: 대각선 앞쪽 1칸에 있는 적만 공격할 수 있습니다.\n\n");
 
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 13f, FontStyle.Regular);

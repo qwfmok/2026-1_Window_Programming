@@ -35,6 +35,11 @@ namespace CardChess.Cards
                 return false;
             }
 
+            if (Name == "방벽 건설" && state.ActiveWalls.ContainsKey($"{targetPos.Row},{targetPos.Col}"))
+            {
+                return false;
+            }
+
             // 증원 카드는 아군 진영(Row 기준 상하 절반)에서만 발동 가능
             if (Name == "증원")
             {

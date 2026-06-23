@@ -2,7 +2,9 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
+using CardChess.Networking;
 
 namespace CardChess.Menu
 {
@@ -10,16 +12,26 @@ namespace CardChess.Menu
     {
         private Form parentForm;
         private bool isInGame;
-        private UDPprotocol udp;
+        private SignalRProtocol network;
+
+        private sealed class WindowPlacement
+        {
+            public Rectangle Bounds;
+            public FormBorderStyle BorderStyle;
+            public FormWindowState WindowState;
+        }
+
+        private static readonly ConditionalWeakTable<Form, WindowPlacement> windowPlacements
+            = new ConditionalWeakTable<Form, WindowPlacement>();
 
         // 배경음악 온오프 관련
         private static bool isBgmOn = true;
 
-        public SettingsMenu(Form parent, bool inGame, UDPprotocol udpProtocol = null)
+        public SettingsMenu(Form parent, bool inGame, SignalRProtocol networkProtocol = null)
         {
             this.parentForm = parent;
             this.isInGame = inGame;
-            this.udp = udpProtocol;
+            this.network = networkProtocol;
 
             // 환경 설정 UI 기본값 세팅
             this.Text = "환경 설정";
@@ -59,19 +71,43 @@ namespace CardChess.Menu
             {
                 if (parentForm.FormBorderStyle == FormBorderStyle.None)
                 {
-                    parentForm.FormBorderStyle = FormBorderStyle.Sizable;
                     parentForm.WindowState = FormWindowState.Normal;
-
-                    Rectangle screen = Screen.FromControl(parentForm).WorkingArea;
-                    parentForm.Location = new Point(
-                        screen.X + (screen.Width - parentForm.Width) / 2,
-                        screen.Y + (screen.Height - parentForm.Height) / 2
-                    );
+                    WindowPlacement placement;
+                    if (windowPlacements.TryGetValue(parentForm, out placement))
+                    {
+                        parentForm.FormBorderStyle = placement.BorderStyle;
+                        parentForm.Bounds = placement.Bounds;
+                        parentForm.WindowState = placement.WindowState == FormWindowState.Minimized
+                            ? FormWindowState.Normal
+                            : placement.WindowState;
+                    }
+                    else
+                    {
+                        parentForm.FormBorderStyle = FormBorderStyle.Sizable;
+                        Rectangle screen = Screen.FromControl(parentForm).WorkingArea;
+                        parentForm.Location = new Point(
+                            screen.X + (screen.Width - parentForm.Width) / 2,
+                            screen.Y + (screen.Height - parentForm.Height) / 2);
+                    }
                 }
                 else
                 {
+                    Rectangle windowBounds = parentForm.WindowState == FormWindowState.Normal
+                        ? parentForm.Bounds
+                        : parentForm.RestoreBounds;
+                    WindowPlacement placement = new WindowPlacement
+                    {
+                        Bounds = windowBounds,
+                        BorderStyle = parentForm.FormBorderStyle,
+                        WindowState = parentForm.WindowState
+                    };
+                    windowPlacements.Remove(parentForm);
+                    windowPlacements.Add(parentForm, placement);
+
+                    Rectangle screenBounds = Screen.FromControl(parentForm).Bounds;
+                    parentForm.WindowState = FormWindowState.Normal;
                     parentForm.FormBorderStyle = FormBorderStyle.None;
-                    parentForm.WindowState = FormWindowState.Maximized;
+                    parentForm.Bounds = screenBounds;
                 }
             };
 
@@ -111,9 +147,15 @@ namespace CardChess.Menu
                     DialogResult result = MessageBox.Show("항복하시겠습니까?\n메인 화면으로 돌아가며 패배 처리됩니다.", "경고", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (result == DialogResult.Yes)
                     {
-                        if (udp != null && udp.IsConnected) udp.Send("SURRENDER");
                         this.Close();
-                        parentForm.Close();
+                        MainForm mainForm = parentForm as MainForm;
+                        if (mainForm != null)
+                            mainForm.SurrenderAndClose();
+                        else
+                        {
+                            if (network != null && network.IsConnected) network.Send("SURRENDER");
+                            parentForm.Close();
+                        }
                     }
                 };
             }

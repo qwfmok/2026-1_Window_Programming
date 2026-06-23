@@ -79,7 +79,7 @@ namespace CardChess
 
             this.Controls.Add(btnSettings);
             btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
-
+            CardChess.View.ResponsiveLayout.Attach(this, new Size(1584, 861));
         }
         private void LoadGameAssets()
         {

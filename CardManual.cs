@@ -85,8 +85,7 @@ namespace CardChess
 
             this.Controls.Add(btnSettings);
             btnSettings.BringToFront(); // 다른 UI 요소에 가려지지 않도록 맨 앞으로 가져옴
-
-
+            CardChess.View.ResponsiveLayout.Attach(this, new Size(1584, 861));
         }
         private void LoadGameAssets()
         {
@@ -388,7 +387,8 @@ namespace CardChess
                     rtbDescription.AppendText("• 효과: 타겟으로 지정한 상대 기물 1개의 소유권을 강탈합니다.\n");
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 12f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 상세: 상대의 기물을 내 것으로 만들어 순식간에 게임의 판도를 뒤집어버리는 치명적인 카드입니다.");
+                    rtbDescription.AppendText("• 제한: 킹과 퀸은 강탈할 수 없으며, 상대 진영의 시작 지점(첫 두 줄)에 있는 기물에는 사용할 수 없습니다.\n");
+                    rtbDescription.AppendText("• 상세: 제한 구역을 벗어난 상대 기물을 내 것으로 만들어 게임의 판도를 뒤집는 카드입니다.");
                     break;
 
                 case "위치 교환":
@@ -433,10 +433,10 @@ namespace CardChess
                     rtbDescription.AppendText("[타겟 스킬 카드]\n\n");
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 12f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 효과: 타겟 기물을 킹을 제외한 무작위 기물로 변이시킵니다.\n");
+                    rtbDescription.AppendText("• 효과: 내 기물을 킹을 제외한 무작위 기물로 변이시킵니다.\n");
                     rtbDescription.SelectionFont = new Font("맑은 고딕", 12f, FontStyle.Regular);
                     rtbDescription.SelectionColor = Color.White;
-                    rtbDescription.AppendText("• 상세: 약한 폰을 도박적으로 퀸이나 룩으로 만들거나, 강력한 적 기물을 폰으로 퇴화시켜버릴 수도 있습니다.");
+                    rtbDescription.AppendText("• 상세: 내 폰이나 진화 기물을 무작위로 변이시켜 전황을 바꾸는 카드이며 상대 기물에는 사용할 수 없습니다.");
                     break;
                 // 🪤 트랩 카드 (Khaki)
                 case "랜덤 방어":

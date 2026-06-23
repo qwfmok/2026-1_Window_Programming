@@ -34,6 +34,12 @@ namespace CardChess.Cards
                     if (piece != null)
                         return false;
 
+                    var graveyard = myPlayer == PlayerType.Player1
+                        ? state.Player1DeadPieces
+                        : state.Player2DeadPieces;
+                    if (graveyard.Count == 0)
+                        return false;
+
                     // 부활 카드는 아군 진영(Row 기준 상하 절반)에서만 발동 가능
                     if (myPlayer == PlayerType.Player1)
                     {
@@ -73,11 +79,16 @@ namespace CardChess.Cards
                     return true;
 
                 // 자신의 기물인지 검증 후 조건 내에서 즉시 발동할 수 있는 카드
-                case "위치 교환":
                 case "방어막":
                 case "유체화":
                 case "봉인": 
                     return piece != null && piece.Owner == myPlayer;
+
+                case "위치 교환":
+                    if (piece == null || piece.Owner != myPlayer)
+                        return false;
+                    return GetAllPieces(state).Any(p =>
+                        p.Owner == myPlayer && p.Type != PieceType.King && p != piece);
 
                 // 소유권 및 주변 좌표의 상태 영향을 받아 발동할 수 있는 카드
                 case "복제":
@@ -116,6 +127,7 @@ namespace CardChess.Cards
 
                 case "봉인":
                     targetPiece.IsFrozen = true;
+                    targetPiece.FrozenTurns = 2;
                     MainForm.Instance.AddLog($"[{Name}] {targetPos.Row},{targetPos.Col} 기물이 봉인되었습니다. 무적 및 행동 불가 상태입니다.");
                     break;
 

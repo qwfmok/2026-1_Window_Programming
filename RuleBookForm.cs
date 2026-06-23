@@ -203,7 +203,7 @@ namespace CardChess
             txtNetworkCode.Text = randomCode;
 
             // 기존 호스트 통신 시작 함수 호출
-            udpProtocol.Starthostip();
+            udpProtocol.Starthostip(randomCode);
 
             lblNetworkStatus.Text = "호스트 대기중... (코드 전달)";
             myPlayerType = PlayerType.Player1;

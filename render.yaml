@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: cardchess-signalr
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Server/CardChess.Server/Dockerfile
+    dockerContext: ./Server/CardChess.Server
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production

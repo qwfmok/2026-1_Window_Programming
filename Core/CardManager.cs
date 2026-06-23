@@ -14,7 +14,7 @@ namespace CardChess.Core
     public class CardManager
     {
         private GameState _state;
-        private Random _random;
+        private SynchronizedRandom _random;
 
         public CardManager(GameState state)
         {
@@ -23,7 +23,7 @@ namespace CardChess.Core
 
         public void InitializeDecks(int seed)
         {
-            _random = new Random(seed);
+            _random = new SynchronizedRandom(seed);
             _state.SharedRandom = _random;
             List<ICard> deckList = new List<ICard>();
 
@@ -44,11 +44,11 @@ namespace CardChess.Core
                 deckList.Add(new ActiveSkillCard("시간 왜곡", "상대의 다음 턴을 스킵합니다."));
                 deckList.Add(new ActiveSkillCard("랜덤 시전", "덱에서 카드 2장을 무작위로 즉시 시전"));
                 deckList.Add(new TargetSkillCard("부활", "내 진영의 빈칸에 내 기물 부활"));
-                deckList.Add(new TargetSkillCard("기물 뺏기", "상대 기물 1개의 소유권 강탈"));
+                deckList.Add(new TargetSkillCard("기물 뺏기", "상대 본진 밖의 킹/퀸이 아닌 기물 1개 강탈"));
                 deckList.Add(new TargetSkillCard("위치 교환", "내 무작위 기물과 위치 교환"));
                 deckList.Add(new TargetSkillCard("봉인", "1턴 동안 무적 및 행동 불가"));
                 deckList.Add(new TargetSkillCard("복제", "인접한 빈칸 중 1곳에 기물 복제"));
-                deckList.Add(new TargetSkillCard("랜덤 진화", "무작위 기물로 변이 (킹 제외)"));
+                deckList.Add(new TargetSkillCard("랜덤 진화", "내 기물을 무작위 기물로 변이 (킹 제외)"));
                 deckList.Add(new TrapCard("랜덤 방어", "50% 확률로 공격 반사 및 파괴"));
             }
 
@@ -107,13 +107,100 @@ namespace CardChess.Core
             if (card == null) return;
             if (card.CanUse(targetPos, _state))
             {
+                bool removedFromHand = _state.Hands.ContainsKey(player) && _state.Hands[player].Remove(card);
                 card.Execute(targetPos, _state, this);
-                if (_state.Hands.ContainsKey(player))
+                if (removedFromHand)
                 {
-                    _state.Hands[player].Remove(card);
-                    _state.DiscardPile.Add(card); // 다 쓴 카드를 허공에 버리지 않고 무덤에 감 *****
+                    _state.DiscardPile.Add(card);
                 }
             }
+        }
+
+        public void BeginRandomCapture()
+        {
+            _random?.BeginCapture();
+        }
+
+        public List<int> EndRandomCapture()
+        {
+            return _random?.EndCapture() ?? new List<int>();
+        }
+
+        public void QueueRandomReplay(IEnumerable<int> values)
+        {
+            _random?.QueueReplay(values);
+        }
+    }
+
+    public sealed class SynchronizedRandom : Random
+    {
+        private readonly Queue<int> replayValues = new Queue<int>();
+        private readonly List<int> capturedValues = new List<int>();
+        private bool isCapturing;
+
+        public SynchronizedRandom(int seed) : base(seed)
+        {
+        }
+
+        public void BeginCapture()
+        {
+            capturedValues.Clear();
+            isCapturing = true;
+        }
+
+        public List<int> EndCapture()
+        {
+            isCapturing = false;
+            return new List<int>(capturedValues);
+        }
+
+        public void QueueReplay(IEnumerable<int> values)
+        {
+            replayValues.Clear();
+            if (values == null) return;
+
+            foreach (int value in values)
+            {
+                replayValues.Enqueue(value);
+            }
+        }
+
+        public override int Next()
+        {
+            int generated = base.Next();
+            return ResolveValue(generated, 0, int.MaxValue);
+        }
+
+        public override int Next(int maxValue)
+        {
+            int generated = base.Next(maxValue);
+            return ResolveValue(generated, 0, maxValue);
+        }
+
+        public override int Next(int minValue, int maxValue)
+        {
+            int generated = base.Next(minValue, maxValue);
+            return ResolveValue(generated, minValue, maxValue);
+        }
+
+        private int ResolveValue(int generated, int minValue, int maxValue)
+        {
+            int value = generated;
+            if (replayValues.Count > 0)
+            {
+                int replay = replayValues.Dequeue();
+                if (replay >= minValue && replay < maxValue)
+                {
+                    value = replay;
+                }
+            }
+
+            if (isCapturing)
+            {
+                capturedValues.Add(value);
+            }
+
+            return value;
         }
     }
 }
