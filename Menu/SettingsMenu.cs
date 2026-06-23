@@ -95,19 +95,8 @@ namespace CardChess.Menu
                     Rectangle windowBounds = parentForm.WindowState == FormWindowState.Normal
                         ? parentForm.Bounds
                         : parentForm.RestoreBounds;
-                    WindowPlacement placement = new WindowPlacement
-                    {
-                        Bounds = windowBounds,
-                        BorderStyle = parentForm.FormBorderStyle,
-                        WindowState = parentForm.WindowState
-                    };
-                    windowPlacements.Remove(parentForm);
-                    windowPlacements.Add(parentForm, placement);
-
                     Rectangle screenBounds = Screen.FromControl(parentForm).Bounds;
-                    parentForm.WindowState = FormWindowState.Normal;
-                    parentForm.FormBorderStyle = FormBorderStyle.None;
-                    parentForm.Bounds = screenBounds;
+                    EnterFullScreen(parentForm, windowBounds, screenBounds);
                 }
             };
 
@@ -178,6 +167,27 @@ namespace CardChess.Menu
             };
 
             this.ClientSize = new Size(this.ClientSize.Width, currentY + 120);
+        }
+
+        public static void EnterFullScreen(Form form, Rectangle restoreBounds, Rectangle screenBounds)
+        {
+            if (form == null)
+                return;
+
+            WindowPlacement placement = new WindowPlacement
+            {
+                Bounds = restoreBounds,
+                BorderStyle = form.FormBorderStyle == FormBorderStyle.None
+                    ? FormBorderStyle.Sizable
+                    : form.FormBorderStyle,
+                WindowState = FormWindowState.Normal
+            };
+            windowPlacements.Remove(form);
+            windowPlacements.Add(form, placement);
+
+            form.WindowState = FormWindowState.Normal;
+            form.FormBorderStyle = FormBorderStyle.None;
+            form.Bounds = screenBounds;
         }
 
         // 기본 윈도우 폼 버튼 속성

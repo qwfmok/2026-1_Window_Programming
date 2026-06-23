@@ -130,10 +130,11 @@ namespace CardChess
             // 네트워크 체크 여부 알려주는 라벨
             lblNetworkStatus = new Label();
             lblNetworkStatus.Location = new Point(90, 640);
-            lblNetworkStatus.Size = new Size(300, 30);
+            lblNetworkStatus.Size = new Size(540, 45);
             lblNetworkStatus.Font = new Font("맑은 고딕", 11f, FontStyle.Bold);
             lblNetworkStatus.ForeColor = Color.White;
             lblNetworkStatus.BackColor = Color.Transparent;
+            lblNetworkStatus.TextAlign = ContentAlignment.MiddleLeft;
             lblNetworkStatus.Text = "네트워크: 오프라인";
 
             this.Controls.Add(txtNetworkCode);
@@ -463,7 +464,14 @@ namespace CardChess
 
             // 메인 폼으로 넘어갈 때 기존 로비의 수신기를 끔
             networkProtocol.OnMessage -= NetworkProtocol_OnMessage;
-            MainForm gameForm = new MainForm(networkProtocol, myPlayerType, sharedSeed);
+            bool startFullScreen = this.FormBorderStyle == FormBorderStyle.None;
+            Rectangle fullScreenBounds = Screen.FromControl(this).Bounds;
+            MainForm gameForm = new MainForm(
+                networkProtocol,
+                myPlayerType,
+                sharedSeed,
+                startFullScreen,
+                fullScreenBounds);
 
             this.Hide();           // 로비 화면을 잠깐 숨김
             gameForm.ShowDialog(); //  게임 화면을 띄움 (게임이 끝날 때까지 여기서 코드가 멈춤)

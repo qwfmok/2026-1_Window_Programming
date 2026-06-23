@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CardChess.csproj" />
+  </ItemGroup>
+  <Target Name="CopyUiAssets" AfterTargets="Build">
+    <ItemGroup>
+      <UiAsset Include="$(MSBuildProjectDirectory)\..\..\bin\Debug\Assets\**\*" />
+      <UiSound Include="$(MSBuildProjectDirectory)\..\..\bin\Debug\Sounds\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UiAsset)" DestinationFiles="@(UiAsset->'$(OutputPath)Assets\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(UiSound)" DestinationFiles="@(UiSound->'$(OutputPath)Sounds\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

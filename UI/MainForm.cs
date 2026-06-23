@@ -84,6 +84,33 @@ namespace CardChess
         private Button btnSettings;
         private readonly ToolTip chatToolTip = new ToolTip();
 
+        private sealed class HandCardButton : Button
+        {
+            public string DisplayText { get; set; }
+
+            protected override void OnPaint(PaintEventArgs pevent)
+            {
+                base.OnPaint(pevent);
+                if (string.IsNullOrEmpty(DisplayText))
+                    return;
+
+                Rectangle textBounds = ClientRectangle;
+                textBounds.Inflate(-4, -4);
+                TextRenderer.DrawText(
+                    pevent.Graphics,
+                    DisplayText,
+                    Font,
+                    textBounds,
+                    ForeColor,
+                    TextFormatFlags.HorizontalCenter |
+                    TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.SingleLine |
+                    TextFormatFlags.EndEllipsis |
+                    TextFormatFlags.NoPadding |
+                    TextFormatFlags.PreserveGraphicsClipping);
+            }
+        }
+
         private const int MaxChatLength = 200;
         private const int DesignClientWidth = 1584;
         private const int DesignClientHeight = 861;
@@ -92,7 +119,12 @@ namespace CardChess
         public static MainForm Instance;
 
         // 1. 생성자 진입점
-        public MainForm(SignalRProtocol connectedNetwork, PlayerType assignedPlayerType, int seed)
+        public MainForm(
+            SignalRProtocol connectedNetwork,
+            PlayerType assignedPlayerType,
+            int seed,
+            bool startFullScreen,
+            Rectangle fullScreenBounds)
         {
             InitializeComponent();
 
@@ -288,6 +320,18 @@ namespace CardChess
 
 
             RelayoutUI();
+
+            if (startFullScreen)
+            {
+                Rectangle workingArea = Screen.FromRectangle(fullScreenBounds).WorkingArea;
+                Rectangle restoreBounds = new Rectangle(
+                    workingArea.X + Math.Max(0, (workingArea.Width - Width) / 2),
+                    workingArea.Y + Math.Max(0, (workingArea.Height - Height) / 2),
+                    Width,
+                    Height);
+                SettingsMenu.EnterFullScreen(this, restoreBounds, fullScreenBounds);
+                RelayoutUI();
+            }
         }
 
         // 2. 턴 체인지
@@ -616,7 +660,7 @@ namespace CardChess
                     int col = i % 4; // 한 줄에 4장
                     int row = i / 4;
 
-                    Button btnCard = new Button
+                    HandCardButton btnCard = new HandCardButton
                     {
                         Width = cardWidth,
                         Height = cardHeight,
@@ -624,14 +668,11 @@ namespace CardChess
                         Top = startY + (cardHeight + spacingY) * row,
                         FlatStyle = FlatStyle.Flat,
                         BackColor = Color.FromArgb(40, 40, 40),
-                        Font = new Font(
-                            "맑은 고딕",
-                            Math.Max(7f, 10f * Math.Min(
-                                ClientSize.Width / (float)DesignClientWidth,
-                                ClientSize.Height / (float)DesignClientHeight)),
-                            FontStyle.Bold),
+                        Font = CreateFittedCardFont(card.Name, cardWidth),
                         ForeColor = Color.White,
-                        Text = card.Name,
+                        Text = string.Empty,
+                        DisplayText = card.Name,
+                        AccessibleName = card.Name,
                         Tag = card,
                         Cursor = Cursors.Hand
                     };
@@ -1684,6 +1725,32 @@ namespace CardChess
             cardWidth = Math.Max(32, (cardAreaWidth - startX - spacingX * 3) / 4);
             int maxCardHeight = Math.Max(50, (pnlPlayerHand.Height - startY * 2 - spacingY) / 2);
             cardHeight = Math.Max(48, Math.Min(maxCardHeight, (int)Math.Round(cardWidth * 1.5)));
+        }
+
+        private Font CreateFittedCardFont(string text, int cardWidth)
+        {
+            float scale = Math.Min(
+                ClientSize.Width / (float)DesignClientWidth,
+                ClientSize.Height / (float)DesignClientHeight);
+            float fontSize = Math.Max(7f, Math.Min(10f, 10f * scale));
+            int availableWidth = Math.Max(20, cardWidth - 12);
+
+            while (fontSize > 6f)
+            {
+                Font candidate = new Font("맑은 고딕", fontSize, FontStyle.Bold);
+                Size measured = TextRenderer.MeasureText(
+                    text,
+                    candidate,
+                    new Size(int.MaxValue, int.MaxValue),
+                    TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                if (measured.Width <= availableWidth)
+                    return candidate;
+
+                candidate.Dispose();
+                fontSize -= 0.5f;
+            }
+
+            return new Font("맑은 고딕", 6f, FontStyle.Bold);
         }
 
         private void ShowCardDescription(ICard card)
